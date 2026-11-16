@@ -30,14 +30,14 @@ pub fn scalability_question() -> models::Question {
 pub fn cap_theorem_question() -> models::Question {
     models::Question {
         id: "cap_theorem_001".to_string(),
-        prompt: "If your business requirements demand atomic reads and writes, which CAP properties should your system prioritize during a network partition?".to_string(),
+        prompt: "According to the CAP theorem, what does consistency mean?".to_string(),
         options: [
-            "Your system should be consistent, available and partition tolerant".to_string(),
-            "Your system should be available and consistent".to_string(),
-            "Your system should be consistent and partition tolerant".to_string(),
-            "Your system should be available and partition tolerant".to_string(),
+            "Every request receives a response, even if it is stale".to_string(),
+            "The system continues operating across a network partition".to_string(),
+            "Every read receives the most recent write or an error".to_string(),
+            "All replicas eventually converge if writes stop".to_string(),
         ],
         correct_answer: models::Choice::C,
-        explanation: "Atomic reads and writes require strong consistency: a read must return the most recently committed value rather than stale data. Because network partitions are unavoidable in distributed systems, the system must also tolerate partitions. During a partition, CAP requires choosing between consistency and availability; a CP system preserves consistency by allowing some requests to fail or wait rather than returning potentially stale data.".to_string(),
+        explanation: "In CAP, consistency means every read observes the most recent write or receives an error. Availability and partition tolerance describe different guarantees.".to_string(),
     }
 }
