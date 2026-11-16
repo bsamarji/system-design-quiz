@@ -12,15 +12,290 @@
     "explanation": "Scalability is a service's ability to handle growing workload by adding resources, such as CPU, memory, or additional servers, while maintaining acceptable performance. For example, adding servers might allow it to support more concurrent users without unacceptable increases in response time. The improvement does not have to be exactly proportional to the resources added; that stronger property is called linear scalability."
   },
   {
-    "id": "cap_theorem_001",
-    "prompt": "If your business requirements demand atomic reads and writes, which CAP properties should your system prioritize during a network partition?",
-    "options": [
-      "Your system should be consistent, available and partition tolerant",
-      "Your system should be available and consistent",
-      "Your system should be consistent and partition tolerant",
-      "Your system should be available and partition tolerant"
-    ],
+    "id": "scalability_002",
+    "prompt": "A service responds quickly for one user but slows significantly as concurrent traffic grows. What is the primary issue?",
+    "options": ["Availability, because some requests are slower", "Scalability, because performance degrades as load grows", "Consistency, because users receive responses at different times", "Durability, because traffic exceeds one user's workload"],
+    "correct_answer": "B",
+    "explanation": "A scalability problem emerges as load grows, even though the system performs well for a single user. A performance problem would also be visible under light load."
+  },
+  {
+    "id": "scalability_003",
+    "prompt": "Which application design best supports horizontal scaling without requiring sticky sessions?",
+    "options": ["Keep each user's session only in one application server's memory", "Replicate in-memory sessions by broadcasting every request to all servers", "Keep application servers stateless and store sessions in a shared data store", "Use round-robin routing while retaining server-local sessions"],
     "correct_answer": "C",
-    "explanation": "Atomic reads and writes require strong consistency: a read must return the most recently committed value rather than stale data. Because network partitions are unavoidable in distributed systems, the system must also tolerate partitions. During a partition, CAP requires choosing between consistency and availability; a CP system preserves consistency by allowing some requests to fail or wait rather than returning potentially stale data."
+    "explanation": "Stateless application servers can handle requests interchangeably. Shared session storage avoids coupling a user to one instance and makes scaling and failover simpler."
+  },
+  {
+    "id": "cap_theorem_001",
+    "prompt": "According to the CAP theorem, what does consistency mean?",
+    "options": ["Every request receives a response, even if it is stale", "The system continues operating across a network partition", "Every read receives the most recent write or an error", "All replicas eventually converge if writes stop"],
+    "correct_answer": "C",
+    "explanation": "In CAP, consistency means every read observes the most recent write or receives an error. Availability and partition tolerance describe different guarantees."
+  },
+  {
+    "id": "cap_theorem_002",
+    "prompt": "During a network partition, what trade-off does an AP system make?",
+    "options": ["It rejects requests until every replica agrees", "It guarantees linearizable reads from every replica", "It stops accepting writes but continues serving only cached reads", "It remains available but can return data that is not the latest"],
+    "correct_answer": "D",
+    "explanation": "An AP system favors availability and partition tolerance. It continues responding during a partition, although a response might not contain the latest write."
+  },
+  {
+    "id": "cap_theorem_003",
+    "prompt": "A shopping cart must remain writable during a partition and can reconcile conflicting updates later. Which CAP design best fits?",
+    "options": ["AP, because it favors availability and can reconcile after the partition", "CP, because all writes should wait for replica agreement", "CA, because network partitions can be excluded from the design", "CP, because stale data must always be preferred to failed requests"],
+    "correct_answer": "A",
+    "explanation": "The requirement prioritizes availability during a partition and accepts temporary inconsistency, which matches AP. Conflicts must be reconciled when replicas reconnect."
+  },
+  {
+    "id": "consistency_patterns_001",
+    "prompt": "Which statement best describes eventual consistency?",
+    "options": ["Every read immediately sees the latest successful write", "Replicas may briefly disagree but converge over time", "Reads are permitted to miss writes indefinitely", "All replicas acknowledge a write before it succeeds"],
+    "correct_answer": "B",
+    "explanation": "With eventual consistency, replicas are commonly updated asynchronously. Reads might temporarily return old data, but replicas converge over time."
+  },
+  {
+    "id": "consistency_patterns_002",
+    "prompt": "Which consistency model is often acceptable for live voice or video where waiting to recover a missed moment would hurt the experience?",
+    "options": ["Strong consistency", "Eventual consistency with guaranteed replay", "Weak consistency", "Serializable consistency"],
+    "correct_answer": "C",
+    "explanation": "Weak consistency uses a best-effort approach: a read may not observe a recent write. It can suit real-time media where continuing is more useful than waiting or replaying lost data."
+  },
+  {
+    "id": "consistency_patterns_003",
+    "prompt": "Why can strong consistency increase latency or reduce availability in a distributed system?",
+    "options": ["It requires every read to come from a client-side cache", "It prevents replicas from storing the same data", "It acknowledges writes before any replica receives them", "It may require synchronous coordination before an operation succeeds"],
+    "correct_answer": "D",
+    "explanation": "Strong consistency commonly requires replicas to coordinate synchronously. Network delay or an unavailable replica can therefore delay or reject an operation."
+  },
+  {
+    "id": "availability_patterns_001",
+    "prompt": "Which pair of patterns directly supports high availability?",
+    "options": ["Failover and replication", "Sharding and denormalization", "Caching and compression", "Batching and polling"],
+    "correct_answer": "A",
+    "explanation": "Failover provides a replacement when an active component fails, while replication maintains additional copies or service instances."
+  },
+  {
+    "id": "availability_patterns_002",
+    "prompt": "What distinguishes active-passive failover from active-active failover?",
+    "options": ["Both active-passive servers serve normal traffic simultaneously", "The passive server waits on standby and takes over after an active failure", "The passive server accepts writes while the active server serves reads", "Traffic is split equally, but only the passive server sends heartbeats"],
+    "correct_answer": "B",
+    "explanation": "In active-passive failover, only the active server normally handles traffic. The standby monitors it, often using heartbeats, and takes over after a failure."
+  },
+  {
+    "id": "availability_patterns_003",
+    "prompt": "Two independent replicas are each 99.9% available, and either can serve a request. What is their approximate combined availability?",
+    "options": ["99.8%", "99.9%", "99.99%", "99.9999%"],
+    "correct_answer": "D",
+    "explanation": "For independent components in parallel, availability is 1 - (1 - 0.999)^2, or 99.9999%. This assumes their failures are independent."
+  },
+  {
+    "id": "dns_001",
+    "prompt": "What is the primary purpose of DNS?",
+    "options": ["Cache static website content at edge locations", "Select an application server using HTTP headers", "Translate domain names into network addresses", "Encrypt traffic between a client and origin"],
+    "correct_answer": "C",
+    "explanation": "DNS translates human-readable names such as www.example.com into network addresses that clients can contact."
+  },
+  {
+    "id": "dns_002",
+    "prompt": "Which DNS record maps a hostname directly to an IPv4 address?",
+    "options": ["NS", "MX", "CNAME", "A"],
+    "correct_answer": "D",
+    "explanation": "An A record maps a name to an IPv4 address. MX identifies mail servers, NS identifies name servers, and CNAME aliases one name to another."
+  },
+  {
+    "id": "dns_003",
+    "prompt": "After changing a DNS record, some users still reach the old server. What is the most likely cause?",
+    "options": ["Resolvers or clients are using cached records whose TTL has not expired", "Authoritative servers convert A records to CNAME records during propagation", "The new IP address cannot be used until every recursive resolver restarts", "DNS guarantees immediate updates, so the cause must be the application cache"],
+    "correct_answer": "A",
+    "explanation": "DNS mappings are cached by resolvers, operating systems, and browsers. Until cached entries expire according to their TTL, some clients can continue using the old value."
+  },
+  {
+    "id": "cdn_001",
+    "prompt": "What is the main benefit of serving suitable content through a CDN?",
+    "options": ["It makes origin storage unnecessary", "It reduces user latency and origin load by serving content from nearby edges", "It guarantees that dynamic data is strongly consistent", "It replaces DNS-based request routing"],
+    "correct_answer": "B",
+    "explanation": "A CDN uses geographically distributed proxy servers to serve content nearer to users, reducing latency and the number of requests reaching origin servers."
+  },
+  {
+    "id": "cdn_002",
+    "prompt": "How does a pull CDN obtain an object that is missing from an edge cache?",
+    "options": ["The publisher must upload the object to every edge before any request", "The edge asks another user to supply the object", "The edge fetches the object from the origin after the cache miss", "The edge reconstructs the object from its DNS record"],
+    "correct_answer": "C",
+    "explanation": "A pull CDN fetches an object from the origin when it is first requested and missing from the edge cache. Later requests can use the cached copy."
+  },
+  {
+    "id": "cdn_003",
+    "prompt": "A site has a small catalogue of rarely changing files and wants precise control over when they reach edge locations. Which approach best fits?",
+    "options": ["A pull CDN with extremely short TTLs", "A pull CDN that never caches misses", "A write-behind application cache", "A push CDN where changed files are uploaded explicitly"],
+    "correct_answer": "D",
+    "explanation": "A push CDN lets the publisher upload new or changed content and control expiry. It works well for smaller, infrequently updated content sets."
+  },
+  {
+    "id": "load_balancers_001",
+    "prompt": "What is a primary responsibility of a load balancer?",
+    "options": ["Distribute requests across healthy computing resources", "Resolve domain names using authoritative records", "Store durable copies of application data", "Synchronize write conflicts between database replicas"],
+    "correct_answer": "A",
+    "explanation": "A load balancer distributes incoming requests across resources and can avoid sending traffic to unhealthy or overloaded servers."
+  },
+  {
+    "id": "load_balancers_002",
+    "prompt": "Which information can a Layer 7 load balancer use that a Layer 4 load balancer generally cannot?",
+    "options": ["Source and destination IP addresses", "HTTP paths, headers, and cookies", "Source and destination TCP ports", "Transport protocol information"],
+    "correct_answer": "B",
+    "explanation": "Layer 7 balancing inspects application-level information such as HTTP paths, headers, and cookies. Layer 4 generally routes using transport-level addresses and ports."
+  },
+  {
+    "id": "load_balancers_003",
+    "prompt": "Why are multiple load balancers often deployed in active-passive or active-active mode?",
+    "options": ["To synchronize session state across all backend servers", "To make backend health checks unnecessary", "To avoid a single point of failure in the balancing tier", "To guarantee round-robin routing during every failure"],
+    "correct_answer": "C",
+    "explanation": "A single load balancer can itself fail. Redundant load balancers improve availability, although they add coordination and operational complexity."
+  },
+  {
+    "id": "reverse_proxy_001",
+    "prompt": "Where is a reverse proxy normally positioned?",
+    "options": ["On the client to hide the client's identity from every destination", "Between database storage and its indexes", "Inside the recursive DNS resolver", "In front of one or more origin servers"],
+    "correct_answer": "D",
+    "explanation": "A reverse proxy accepts client requests on behalf of backend servers and forwards each request to an appropriate origin."
+  },
+  {
+    "id": "reverse_proxy_002",
+    "prompt": "Which responsibility can a reverse proxy take away from application servers?",
+    "options": ["TLS termination and response caching", "Relational schema normalization", "Resolving replica write conflicts", "Assigning DNS authoritative zones"],
+    "correct_answer": "A",
+    "explanation": "Reverse proxies can terminate TLS, cache content, compress responses, and hide backend topology, reducing work performed by application servers."
+  },
+  {
+    "id": "reverse_proxy_003",
+    "prompt": "Which statement most accurately describes the relationship between reverse proxies and load balancers?",
+    "options": ["A load balancer is always Layer 4, while a reverse proxy is always Layer 7", "One product can perform both roles; reverse-proxy features can help even with one backend", "A reverse proxy handles outbound client traffic, while a load balancer handles inbound traffic", "A reverse proxy requires one backend, while a load balancer requires exactly two"],
+    "correct_answer": "B",
+    "explanation": "The roles overlap, and products such as NGINX and HAProxy can perform both. Load balancing is useful with multiple backends, while reverse-proxy features such as TLS termination, caching, and compression can help even with one backend."
+  },
+  {
+    "id": "application_layer_001",
+    "prompt": "What does service discovery help an application find?",
+    "options": ["The database row containing a user's profile", "The DNS registrar responsible for a public domain", "The network locations of available service instances", "The source repository containing a service"],
+    "correct_answer": "C",
+    "explanation": "Service discovery maintains or queries a registry of service instances so clients can locate healthy endpoints whose addresses can change."
+  },
+  {
+    "id": "application_layer_002",
+    "prompt": "What is a common benefit of splitting an application into independently deployable services?",
+    "options": ["It eliminates network failures between components", "It makes distributed transactions simpler than local transactions", "It removes the need for monitoring and service discovery", "Each service can be deployed and scaled for its own workload"],
+    "correct_answer": "D",
+    "explanation": "Independent services can be deployed and scaled separately. The trade-off is added network, observability, deployment, and data-consistency complexity."
+  },
+  {
+    "id": "application_layer_003",
+    "prompt": "A registered service instance has stopped sending health heartbeats. How should service discovery treat it for new requests?",
+    "options": ["Stop returning it as a healthy endpoint", "Keep returning it until every client reports a failure", "Prefer it because it has received less recent traffic", "Return only that instance until its DNS TTL expires"],
+    "correct_answer": "A",
+    "explanation": "Discovery should remove or avoid unhealthy instances based on health checks or expired heartbeats so callers do not route new work to failed services."
+  },
+  {
+    "id": "database_001",
+    "prompt": "Which requirement most strongly favors a relational database?",
+    "options": ["A flexible schema for unrelated documents", "Complex joins and transactional guarantees", "Traversing deep many-to-many relationships as the primary workload", "Writing key-value records without relational constraints"],
+    "correct_answer": "B",
+    "explanation": "Relational databases are a strong fit for structured relational data, strict schemas, complex joins, and transactional guarantees."
+  },
+  {
+    "id": "database_002",
+    "prompt": "In typical primary-replica database replication, how are requests routed?",
+    "options": ["Reads and writes must both go to every replica", "Writes go to replicas while reads go only to the primary", "Writes go to the primary while reads may be served by replicas", "Each client chooses a writable node and conflicts are impossible"],
+    "correct_answer": "C",
+    "explanation": "The primary accepts writes and replicates changes to replicas. Replicas can scale reads, although asynchronous replication can make them temporarily stale."
+  },
+  {
+    "id": "database_003",
+    "prompt": "Which trade-off commonly accompanies database sharding?",
+    "options": ["All queries gain access to one global index", "Application-level routing is no longer necessary", "Replication becomes unnecessary because shards cannot fail", "Cross-shard joins, rebalancing, and uneven load add complexity"],
+    "correct_answer": "D",
+    "explanation": "Sharding reduces the data and load handled by each database, but routing, uneven shard load, rebalancing, and cross-shard operations add complexity."
+  },
+  {
+    "id": "cache_001",
+    "prompt": "Why is a cache commonly placed in front of a database?",
+    "options": ["Reduce repeated database work and response latency", "Guarantee cached data can never become stale", "Replace durable storage with volatile memory", "Ensure every read reaches the database first"],
+    "correct_answer": "A",
+    "explanation": "A cache serves frequently requested data quickly, reducing latency and load on application servers and databases."
+  },
+  {
+    "id": "cache_002",
+    "prompt": "What happens on a cache miss in the cache-aside pattern?",
+    "options": ["The application reads the data store and returns the value without caching it", "The application reads the data store, caches the value, and returns it", "The cache writes a placeholder and asks the client to retry after expiry", "The request is forwarded between cache nodes until one contains the key"],
+    "correct_answer": "B",
+    "explanation": "Cache-aside checks the cache first. On a miss, the application fetches from the data store and places the result into the cache for later reads."
+  },
+  {
+    "id": "cache_003",
+    "prompt": "What is the main durability risk of write-behind caching?",
+    "options": ["Every write waits for synchronous database confirmation", "Newly written values can never be read from cache", "Acknowledged data can be lost if the cache fails before asynchronous persistence", "The database becomes the only component able to serve reads"],
+    "correct_answer": "C",
+    "explanation": "Write-behind acknowledges a cache update before asynchronously persisting it. A cache failure before the data-store write completes can lose acknowledged data."
+  },
+  {
+    "id": "asynchronism_001",
+    "prompt": "What is a common purpose of a message queue?",
+    "options": ["Guarantee consumers process every message simultaneously", "Replace persistent data stores for all application state", "Ensure producers run only when consumers are idle", "Decouple producers from consumers and buffer work"],
+    "correct_answer": "D",
+    "explanation": "A message queue allows producers and consumers to operate independently and at different rates while queued work waits to be processed."
+  },
+  {
+    "id": "asynchronism_002",
+    "prompt": "How can a task queue help a web application handle a slow image-processing job?",
+    "options": ["Enqueue the work for a background worker and return promptly", "Run the full job in the request handler before responding", "Send the job to every application instance and use the first result", "Store the unfinished job only in the user's browser"],
+    "correct_answer": "A",
+    "explanation": "A task queue moves long-running work out of the request path. Workers process jobs asynchronously, improving responsiveness and controlling concurrency."
+  },
+  {
+    "id": "asynchronism_003",
+    "prompt": "Consumers cannot keep up with producers and a queue grows without bound. Which response best applies back pressure?",
+    "options": ["Increase producer retries without limits", "Bound or throttle production and scale consumers where appropriate", "Disable queue-depth monitoring to reduce overhead", "Acknowledge and discard all messages before processing"],
+    "correct_answer": "B",
+    "explanation": "Back pressure prevents an overloaded downstream system from accepting unlimited work. Bounded queues, producer throttling, load shedding, and additional consumers are common responses."
+  },
+  {
+    "id": "communication_001",
+    "prompt": "Which protocol provides reliable, ordered transport between applications?",
+    "options": ["HTTP", "UDP", "TCP", "RPC"],
+    "correct_answer": "C",
+    "explanation": "TCP provides connection-oriented, reliable, ordered byte delivery. UDP has lower overhead but does not guarantee delivery or ordering."
+  },
+  {
+    "id": "communication_002",
+    "prompt": "Which statement best contrasts RPC and REST?",
+    "options": ["REST models procedures, while RPC models resource state through fixed verbs", "REST requires generated clients, while RPC uses only browser-native clients", "RPC is stateless by definition, while REST requires server-side sessions", "RPC models operations, while REST models resources through a uniform interface"],
+    "correct_answer": "D",
+    "explanation": "RPC is centered on invoking service operations and can couple clients to those operations. REST models resources with a uniform, stateless interface."
+  },
+  {
+    "id": "communication_003",
+    "prompt": "A real-time game prefers timely position updates over retransmitting old packets. Which transport is the most natural starting point?",
+    "options": ["UDP, with application-level handling for acceptable loss", "TCP, because every old packet must arrive before a new one can be used", "HTTP long polling, because it guarantees the lowest transport overhead", "RPC, because it is a transport protocol with no delivery guarantees"],
+    "correct_answer": "A",
+    "explanation": "UDP avoids connection and retransmission overhead. For time-sensitive updates, receiving newer data can be more useful than waiting for an older lost packet, although the application must handle loss."
+  },
+  {
+    "id": "security_001",
+    "prompt": "Which control primarily protects application data while it travels across a network?",
+    "options": ["Full-disk encryption on the application server", "TLS between communicating endpoints", "Parameterized database queries", "Least-privilege service accounts"],
+    "correct_answer": "B",
+    "explanation": "TLS protects data in transit against interception and tampering. Disk encryption protects data at rest, parameterized queries address injection, and least privilege limits access."
+  },
+  {
+    "id": "security_002",
+    "prompt": "A search endpoint accepts a user-supplied term for a SQL query. Which implementation best prevents SQL injection?",
+    "options": ["Escape selected punctuation and concatenate the remaining text", "Reject terms containing SQL keywords before building the query", "Use a parameterized query that binds the term separately from SQL code", "Encode the completed SQL statement before sending it to the database"],
+    "correct_answer": "C",
+    "explanation": "Parameterized queries keep user input separate from executable SQL syntax. Keyword filtering, manual escaping, and encoding a completed query are brittle substitutes."
+  },
+  {
+    "id": "security_003",
+    "prompt": "An order service only needs to read orders and update their status. Which database permission design best follows least privilege?",
+    "options": ["Grant administrator access so future features need no permission changes", "Grant read and write access to every table in the application database", "Share the deployment account because it already has schema-management access", "Grant only the required read and status-update permissions on order data"],
+    "correct_answer": "D",
+    "explanation": "Least privilege grants only the permissions needed for the service's current responsibilities. Broad administrator, schema-management, or unrelated table access increases the impact of compromise."
   }
 ]
