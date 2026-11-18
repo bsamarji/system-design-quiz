@@ -151,15 +151,21 @@ fn display_feedback<W: Write>(
         Choice::C => 'C',
         Choice::D => 'D',
     };
+    let user_choice = match app.answers[&current_question.id] {
+        Choice::A => 'A',
+        Choice::B => 'B',
+        Choice::C => 'C',
+        Choice::D => 'D',
+    };
+
+    queue!(stdout, Print("-".repeat(30)), Print("\r\n\r\n"),)?;
 
     if is_correct {
         queue!(
             stdout,
             SetAttribute(Attribute::Bold),
             SetForegroundColor(Color::Green),
-            Print(format!(
-                "The correct answer is {correct_choice}. Well done!"
-            )),
+            Print("CORRECT"),
             SetAttribute(Attribute::Reset),
             Print("\r\n\r\n"),
         )?;
@@ -168,13 +174,21 @@ fn display_feedback<W: Write>(
             stdout,
             SetAttribute(Attribute::Bold),
             SetForegroundColor(Color::Red),
-            Print(format!(
-                "The correct answer is {correct_choice}. Read the explanation to learn more..."
-            )),
+            Print("INCORRECT"),
             SetAttribute(Attribute::Reset),
             Print("\r\n\r\n"),
         )?;
     }
+
+    queue!(
+        stdout,
+        Print(format!("Your answer: {}", user_choice)),
+        Print("\r\n\r\n"),
+        Print(format!("Correct answer: {}", correct_choice)),
+        Print("\r\n\r\n"),
+    )?;
+
+    queue!(stdout, Print("-".repeat(30)), Print("\r\n\r\n"),)?;
 
     queue!(
         stdout,
@@ -227,7 +241,7 @@ fn display_summary<W: Write>(score: QuizScore, mut stdout: W) -> io::Result<()> 
     queue!(
         stdout,
         SetAttribute(Attribute::Bold),
-        Print(format!("  Percentage: {}%", score.percentage)),
+        Print(format!("  Percentage: {:.1}%", score.percentage)),
         SetAttribute(Attribute::Reset),
         Print("\r\n\r\n"),
     )?;
@@ -250,7 +264,7 @@ fn display_question_navigation<W: Write>(mut stdout: W) -> io::Result<()> {
     queue!(
         stdout,
         SetAttribute(Attribute::Bold),
-        Print("Press <a> - <d> to answer / <n>ext question / <p>revious question / <q>uit\r\n"),
+        Print("Press [A] - [D] Answer  [N] Next  [P] Previous  [Q] Quit\r\n"),
         Print("\r\n\r\n"),
     )?;
 
@@ -263,7 +277,7 @@ fn display_feedback_navigation<W: Write>(mut stdout: W) -> io::Result<()> {
     queue!(
         stdout,
         SetAttribute(Attribute::Bold),
-        Print("Press <n>ext question / <p>revious question / <q>uit\r\n"),
+        Print("Press [N] Next  [P] Previous  [Q] Quit\r\n"),
         Print("\r\n\r\n"),
     )?;
 
@@ -275,7 +289,7 @@ fn display_summary_navigation<W: Write>(mut stdout: W) -> io::Result<()> {
     queue!(
         stdout,
         SetAttribute(Attribute::Bold),
-        Print("Press <p>revious question / <r>eset quiz / <q>uit\r\n"),
+        Print("Press [P] Previous  [R] Reset  [Q] Quit\r\n"),
         Print("\r\n\r\n"),
     )?;
 
