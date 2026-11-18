@@ -78,6 +78,10 @@ pub fn render<W: Write>(app: &mut app_state::App, mut stdout: W) -> io::Result<(
             display_summary(quiz_score, &mut stdout)?;
             display_summary_navigation(&mut stdout)?;
         }
+        Screen::Unanswered => {
+            display_unanswered(app, &mut stdout)?;
+            display_unanswered_navigation(&mut stdout)?;
+        }
     }
 
     Ok(())
@@ -259,6 +263,38 @@ fn display_summary<W: Write>(score: QuizScore, mut stdout: W) -> io::Result<()> 
     stdout.flush()
 }
 
+/// Prints the number of unanswered questions to the screen and the id of the
+/// first question that remains unanswered
+fn display_unanswered<W: Write>(app: &app_state::App, mut stdout: W) -> io::Result<()> {
+    queue!(stdout, Clear(ClearType::All), MoveTo(0, 0),)?;
+
+    let missing_answer_count = app.questions.len() - app.answers.len();
+
+    queue!(
+        stdout,
+        SetAttribute(Attribute::Bold),
+        Print(format!(
+            "{} questions remain unanswered.",
+            missing_answer_count
+        )),
+        SetAttribute(Attribute::Reset),
+        Print("\r\n"),
+    )?;
+
+    for question in &app.questions {
+        if !app.answers.contains_key(&question.id) {
+            queue!(
+                stdout,
+                Print(format!("Next unanswered question: {}", question.id)),
+                Print("\r\n\r\n"),
+            )?;
+            break;
+        }
+    }
+
+    stdout.flush()
+}
+
 /// Prints the actionable keys available to the user on the `Question` screen
 fn display_question_navigation<W: Write>(mut stdout: W) -> io::Result<()> {
     queue!(
@@ -290,6 +326,19 @@ fn display_summary_navigation<W: Write>(mut stdout: W) -> io::Result<()> {
         stdout,
         SetAttribute(Attribute::Bold),
         Print("Press [P] Previous  [R] Reset  [Q] Quit\r\n"),
+        Print("\r\n\r\n"),
+    )?;
+
+    stdout.flush()
+}
+
+/// Prints the actionable keys available to the user on the `Unanswered` screen
+fn display_unanswered_navigation<W: Write>(mut stdout: W) -> io::Result<()> {
+    queue!(
+        stdout,
+        SetAttribute(Attribute::Bold),
+        Print("Press [U] to go the next unanswered question  [P] Previous  [Q] Quit",),
+        SetAttribute(Attribute::Reset),
         Print("\r\n\r\n"),
     )?;
 
