@@ -71,8 +71,8 @@ fn main() {
             // Handle key press event
             app.handle_event(key_event);
         }
-    }
 
-    save(&progress_file_path, &app.progress())
-        .unwrap_or_else(|err| eprintln!("Error saving current progress: {err}"));
+        save(&progress_file_path, &app.progress())
+            .unwrap_or_else(|err| eprintln!("Error saving current progress: {err}"));
+    }
 }

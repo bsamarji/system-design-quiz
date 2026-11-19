@@ -15,6 +15,7 @@ pub enum Screen {
     Question,
     Feedback,
     Summary,
+    Unanswered,
 }
 
 /// Data structure for holding the current state of the app
@@ -156,6 +157,17 @@ impl App {
         self.screen = Screen::Question;
     }
 
+    /// Finds the first question in the questions list that is unanswered
+    /// and sets it as the current index
+    fn next_unanswered_question(&mut self) {
+        for (index, question) in self.questions.iter().enumerate() {
+            if !self.answers.contains_key(&question.id) {
+                self.current_question_index = index;
+                break;
+            }
+        }
+    }
+
     /// Handles key press events to dictate the next action the application
     /// takes
     pub fn handle_event(&mut self, key_event: KeyEvent) {
@@ -184,13 +196,15 @@ impl App {
                         self.current_question_index + 1 == self.questions.len();
                     if is_on_last_question && self.all_questions_answered() {
                         self.screen = Screen::Summary;
+                    } else if is_on_last_question && !self.all_questions_answered() {
+                        self.screen = Screen::Unanswered;
                     } else {
                         self.increment_question_index();
                         self.update_screen_for_current_question();
                     }
                 }
                 KeyCode::Char('p') => {
-                    if self.screen == Screen::Summary {
+                    if self.screen == Screen::Summary || self.screen == Screen::Unanswered {
                         self.update_screen_for_current_question();
                     } else {
                         self.decrement_question_index();
@@ -199,6 +213,10 @@ impl App {
                 }
                 KeyCode::Char('r') if self.screen == Screen::Summary => {
                     self.reset_quiz();
+                }
+                KeyCode::Char('u') if self.screen == Screen::Unanswered => {
+                    self.next_unanswered_question();
+                    self.update_screen_for_current_question();
                 }
                 _ => {}
             }
@@ -440,6 +458,24 @@ mod tests {
     }
 
     #[test]
+    fn go_to_next_unanswered_question() {
+        let answers = HashMap::from([("scalability_001".to_string(), Choice::A)]);
+        let progress = QuizProgress {
+            answers,
+            current_question_id: "scalability_001".to_string(),
+        };
+        let questions = vec![scalability_question(), cap_theorem_question()];
+
+        let mut test_app = App::build_from_progress(questions, progress);
+
+        assert_eq!(test_app.current_question_index, 0);
+
+        test_app.next_unanswered_question();
+
+        assert_eq!(test_app.current_question_index, 1);
+    }
+
+    #[test]
     fn q_sets_exit_status_true() {
         let mut test_app = App::build(vec![scalability_question()]);
 
@@ -500,6 +536,24 @@ mod tests {
         assert_eq!(test_app.current_question_index, 0);
         assert_eq!(test_app.screen, Screen::Question);
         assert!(test_app.answers.is_empty());
+    }
+
+    #[test]
+    fn u_goes_to_next_unanswered_question() {
+        let answers = HashMap::from([("scalability_001".to_string(), Choice::A)]);
+        let progress = QuizProgress {
+            answers,
+            current_question_id: "scalability_001".to_string(),
+        };
+        let questions = vec![scalability_question(), cap_theorem_question()];
+        let mut test_app = App::build_from_progress(questions, progress);
+        test_app.screen = Screen::Unanswered;
+
+        assert_eq!(test_app.current_question_index, 0);
+
+        test_app.handle_event(KeyEvent::new(KeyCode::Char('u'), KeyModifiers::NONE));
+
+        assert_eq!(test_app.current_question_index, 1);
     }
 
     #[test]

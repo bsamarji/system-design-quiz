@@ -8,7 +8,7 @@ use std::io::{self, Write};
 use crate::{
     app_state::{self, Screen},
     models::Choice,
-    quiz::{QuizScore, calculate_score, evaluate_answer},
+    quiz::{QuizScore, calculate_score, evaluate_answer, topics_to_review},
 };
 use crossterm::{
     cursor::MoveTo,
@@ -19,6 +19,7 @@ use crossterm::{
         enable_raw_mode,
     },
 };
+use textwrap::wrap;
 
 /// This struct can be used to enter and leave the alternate screen.
 ///
@@ -55,6 +56,62 @@ impl Drop for TerminalGuard {
     }
 }
 
+/// Retrieve the current terminal width.
+///
+/// This function places an upper limit of 120 columns and
+/// a lower limit of 20 columns.
+///
+/// This function also defaults to 80 columns if the terminal size cannot be
+/// found.
+fn terminal_content_width() -> usize {
+    crossterm::terminal::size()
+        .map(|(width, _)| usize::from(width))
+        .unwrap_or(80)
+        .saturating_sub(4)
+        .clamp(20, 120)
+}
+
+/// Helper function to wrap text when printing to stdout
+fn print_wrapped<W: Write>(stdout: &mut W, text: &str, width: usize) -> io::Result<()> {
+    for line in wrap(text, width) {
+        queue!(stdout, Print(line), Print("\r\n"))?;
+    }
+
+    Ok(())
+}
+
+/// Helper function to wrap text when printing answer options to stdout
+///
+/// This function handles indentation as well as text wrapping.
+fn print_wrapped_option<W: Write>(
+    stdout: &mut W,
+    label: char,
+    option: &str,
+    width: usize,
+) -> io::Result<()> {
+    let prefix = format!("  {label}. ");
+    let indentation = " ".repeat(prefix.len());
+
+    let option_width = width.saturating_sub(prefix.len()).max(1);
+
+    for (index, line) in wrap(option, option_width).iter().enumerate() {
+        if index == 0 {
+            queue!(
+                stdout,
+                SetForegroundColor(Color::Cyan),
+                Print(&prefix),
+                SetAttribute(Attribute::Reset),
+            )?;
+        } else {
+            queue!(stdout, Print(&indentation))?;
+        }
+
+        queue!(stdout, Print(line), Print("\r\n"),)?;
+    }
+
+    Ok(())
+}
+
 /// Renders a `Screen` in the terminal's alternate screen.
 ///
 /// The `Screen` is auto-formatted using the display functions.
@@ -62,21 +119,28 @@ impl Drop for TerminalGuard {
 /// The `Screen` can be of Question, Feedback or Summary, depending on the app
 /// state.
 pub fn render<W: Write>(app: &mut app_state::App, mut stdout: W) -> io::Result<()> {
+    let width = terminal_content_width();
+
     match app.screen {
         Screen::Question => {
-            display_question(app, &mut stdout)?;
-            display_question_navigation(&mut stdout)?;
+            display_question(app, &mut stdout, width)?;
+            display_question_navigation(&mut stdout, width)?;
         }
         Screen::Feedback => {
-            display_question(app, &mut stdout)?;
+            display_question(app, &mut stdout, width)?;
             let is_correct = evaluate_answer(app);
-            display_feedback(is_correct, app, &mut stdout)?;
-            display_feedback_navigation(&mut stdout)?;
+            display_feedback(is_correct, app, &mut stdout, width)?;
+            display_feedback_navigation(&mut stdout, width)?;
         }
         Screen::Summary => {
             let quiz_score = calculate_score(&app.questions, &app.answers);
-            display_summary(quiz_score, &mut stdout)?;
-            display_summary_navigation(&mut stdout)?;
+            let topics = topics_to_review(&app.questions, &app.answers);
+            display_summary(quiz_score, &mut stdout, topics)?;
+            display_summary_navigation(&mut stdout, width)?;
+        }
+        Screen::Unanswered => {
+            display_unanswered(app, &mut stdout, width)?;
+            display_unanswered_navigation(&mut stdout, width)?;
         }
     }
 
@@ -86,51 +150,41 @@ pub fn render<W: Write>(app: &mut app_state::App, mut stdout: W) -> io::Result<(
 /// Prints a question to stdout.
 ///
 /// The question is formatted into a user-friendly quiz style.
-fn display_question<W: Write>(app: &app_state::App, mut stdout: W) -> io::Result<()> {
+fn display_question<W: Write>(app: &app_state::App, mut stdout: W, width: usize) -> io::Result<()> {
     queue!(stdout, Clear(ClearType::All), MoveTo(0, 0),)?;
 
     let current_question_number = app.current_question_index + 1;
     let total_question_count = app.questions.len();
 
-    queue!(
-        stdout,
-        SetAttribute(Attribute::Bold),
-        Print(format!(
+    queue!(stdout, SetAttribute(Attribute::Bold))?;
+    print_wrapped(
+        &mut stdout,
+        &format!(
             "Question {} of {}",
             current_question_number, total_question_count
-        )),
-        SetAttribute(Attribute::Reset),
-        Print("\r\n\r\n"),
+        ),
+        width,
     )?;
+    queue!(stdout, SetAttribute(Attribute::Reset), Print("\r\n"),)?;
 
     let question = &app.questions[app.current_question_index];
 
     queue!(
         stdout,
         SetAttribute(Attribute::Bold),
-        SetAttribute(Attribute::Underlined),
-        Print(format!("Question ID: {}", question.id)),
-        SetAttribute(Attribute::Reset),
-        Print("\r\n\r\n"),
+        SetAttribute(Attribute::Underlined)
     )?;
+    print_wrapped(&mut stdout, &format!("Question ID: {}", question.id), width)?;
+    queue!(stdout, SetAttribute(Attribute::Reset), Print("\r\n"))?;
 
-    queue!(
-        stdout,
-        SetAttribute(Attribute::Bold),
-        Print(&question.prompt),
-        SetAttribute(Attribute::Reset),
-        Print("\r\n\r\n"),
-    )?;
+    queue!(stdout, SetAttribute(Attribute::Bold))?;
+
+    print_wrapped(&mut stdout, &question.prompt, width)?;
+    queue!(stdout, SetAttribute(Attribute::Reset), Print("\r\n"),)?;
 
     for (label, option) in ['A', 'B', 'C', 'D'].iter().zip(question.options.iter()) {
-        queue!(
-            stdout,
-            SetForegroundColor(Color::Cyan),
-            Print(format!("  {label}. ")),
-            SetAttribute(Attribute::Reset),
-            Print(option),
-            Print("\r\n\r\n"),
-        )?;
+        print_wrapped_option(&mut stdout, *label, option, width)?;
+        queue!(stdout, Print("\r\n"))?;
     }
 
     stdout.flush()
@@ -143,6 +197,7 @@ fn display_feedback<W: Write>(
     is_correct: bool,
     app: &mut app_state::App,
     mut stdout: W,
+    width: usize,
 ) -> io::Result<()> {
     let current_question = &app.questions[app.current_question_index];
     let correct_choice = match current_question.correct_answer {
@@ -151,15 +206,21 @@ fn display_feedback<W: Write>(
         Choice::C => 'C',
         Choice::D => 'D',
     };
+    let user_choice = match app.answers[&current_question.id] {
+        Choice::A => 'A',
+        Choice::B => 'B',
+        Choice::C => 'C',
+        Choice::D => 'D',
+    };
+
+    queue!(stdout, Print("-".repeat(30)), Print("\r\n\r\n"),)?;
 
     if is_correct {
         queue!(
             stdout,
             SetAttribute(Attribute::Bold),
             SetForegroundColor(Color::Green),
-            Print(format!(
-                "The correct answer is {correct_choice}. Well done!"
-            )),
+            Print("CORRECT"),
             SetAttribute(Attribute::Reset),
             Print("\r\n\r\n"),
         )?;
@@ -168,9 +229,7 @@ fn display_feedback<W: Write>(
             stdout,
             SetAttribute(Attribute::Bold),
             SetForegroundColor(Color::Red),
-            Print(format!(
-                "The correct answer is {correct_choice}. Read the explanation to learn more..."
-            )),
+            Print("INCORRECT"),
             SetAttribute(Attribute::Reset),
             Print("\r\n\r\n"),
         )?;
@@ -178,19 +237,33 @@ fn display_feedback<W: Write>(
 
     queue!(
         stdout,
+        Print(format!("• Your answer: {}", user_choice)),
+        Print("\r\n\r\n"),
+        Print(format!("• Correct answer: {}", correct_choice)),
+        Print("\r\n\r\n"),
+    )?;
+
+    queue!(stdout, Print("-".repeat(30)), Print("\r\n\r\n"),)?;
+
+    queue!(
+        stdout,
         SetAttribute(Attribute::Bold),
         Print("Explanation:"),
         Print("\r\n\r\n"),
-        SetAttribute(Attribute::Reset),
-        Print(&current_question.explanation),
-        Print("\r\n\r\n"),
+        SetAttribute(Attribute::Reset)
     )?;
+    print_wrapped(&mut stdout, &current_question.explanation, width)?;
+    queue!(stdout, Print("\r\n"),)?;
 
     stdout.flush()
 }
 
 /// Prints the quiz summary to stdout
-fn display_summary<W: Write>(score: QuizScore, mut stdout: W) -> io::Result<()> {
+fn display_summary<W: Write>(
+    score: QuizScore,
+    mut stdout: W,
+    topics: Vec<String>,
+) -> io::Result<()> {
     let grade_color = if score.grade == 'A' {
         Color::DarkGreen
     } else if score.grade == 'B' {
@@ -219,39 +292,89 @@ fn display_summary<W: Write>(score: QuizScore, mut stdout: W) -> io::Result<()> 
     queue!(
         stdout,
         SetAttribute(Attribute::Bold),
-        Print(format!("  Total score: {}/{}", score.correct, score.total)),
+        Print(format!("• Total score: {}/{}", score.correct, score.total)),
         SetAttribute(Attribute::Reset),
-        Print("\r\n\r\n"),
+        Print("\r\n"),
     )?;
 
     queue!(
         stdout,
         SetAttribute(Attribute::Bold),
-        Print(format!("  Percentage: {}%", score.percentage)),
+        Print(format!("• Percentage: {:.1}%", score.percentage)),
         SetAttribute(Attribute::Reset),
-        Print("\r\n\r\n"),
+        Print("\r\n"),
     )?;
 
     queue!(
         stdout,
         SetAttribute(Attribute::Bold),
-        Print("  Grade: "),
+        Print("• Grade: "),
         SetForegroundColor(grade_color),
         Print(score.grade),
         SetAttribute(Attribute::Reset),
         Print("\r\n\r\n"),
     )?;
 
+    queue!(
+        stdout,
+        SetAttribute(Attribute::Bold),
+        Print("Topics to review:"),
+        SetAttribute(Attribute::Reset),
+        Print("\r\n"),
+    )?;
+
+    if !topics.is_empty() {
+        for topic in topics {
+            queue!(stdout, Print(format!("• {}", topic)), Print("\r\n"))?;
+        }
+    }
+
+    queue!(stdout, Print("\r\n"))?;
+
+    stdout.flush()
+}
+
+/// Prints the number of unanswered questions to the screen and the id of the
+/// first question that remains unanswered
+fn display_unanswered<W: Write>(
+    app: &app_state::App,
+    mut stdout: W,
+    width: usize,
+) -> io::Result<()> {
+    queue!(stdout, Clear(ClearType::All), MoveTo(0, 0),)?;
+
+    let missing_answer_count = app.questions.len() - app.answers.len();
+
+    queue!(stdout, SetAttribute(Attribute::Bold))?;
+    print_wrapped(
+        &mut stdout,
+        &format!("{} questions remain unanswered.", missing_answer_count),
+        width,
+    )?;
+    queue!(stdout, SetAttribute(Attribute::Reset))?;
+
+    for question in &app.questions {
+        if !app.answers.contains_key(&question.id) {
+            print_wrapped(
+                &mut stdout,
+                &format!("Next unanswered question: {}", question.id),
+                width,
+            )?;
+            queue!(stdout, Print("\r\n"),)?;
+            break;
+        }
+    }
+
     stdout.flush()
 }
 
 /// Prints the actionable keys available to the user on the `Question` screen
-fn display_question_navigation<W: Write>(mut stdout: W) -> io::Result<()> {
-    queue!(
-        stdout,
-        SetAttribute(Attribute::Bold),
-        Print("Press <a> - <d> to answer / <n>ext question / <p>revious question / <q>uit\r\n"),
-        Print("\r\n\r\n"),
+fn display_question_navigation<W: Write>(mut stdout: W, width: usize) -> io::Result<()> {
+    queue!(stdout, SetAttribute(Attribute::Bold))?;
+    print_wrapped(
+        &mut stdout,
+        "Press [A] - [D] Answer  [N] Next  [P] Previous  [Q] Quit",
+        width,
     )?;
 
     stdout.flush()
@@ -259,24 +382,32 @@ fn display_question_navigation<W: Write>(mut stdout: W) -> io::Result<()> {
 
 /// Prints the actionable keys available to the user on the `Feedback` screen
 /// or the `Summary` screen
-fn display_feedback_navigation<W: Write>(mut stdout: W) -> io::Result<()> {
-    queue!(
-        stdout,
-        SetAttribute(Attribute::Bold),
-        Print("Press <n>ext question / <p>revious question / <q>uit\r\n"),
-        Print("\r\n\r\n"),
-    )?;
+fn display_feedback_navigation<W: Write>(mut stdout: W, width: usize) -> io::Result<()> {
+    queue!(stdout, SetAttribute(Attribute::Bold))?;
+    print_wrapped(&mut stdout, "Press [N] Next  [P] Previous  [Q] Quit", width)?;
 
     stdout.flush()
 }
 
 /// Prints the actionable keys available to the user on the `Summary` screen
-fn display_summary_navigation<W: Write>(mut stdout: W) -> io::Result<()> {
-    queue!(
-        stdout,
-        SetAttribute(Attribute::Bold),
-        Print("Press <p>revious question / <r>eset quiz / <q>uit\r\n"),
-        Print("\r\n\r\n"),
+fn display_summary_navigation<W: Write>(mut stdout: W, width: usize) -> io::Result<()> {
+    queue!(stdout, SetAttribute(Attribute::Bold))?;
+    print_wrapped(
+        &mut stdout,
+        "Press [P] Previous  [R] Reset  [Q] Quit",
+        width,
+    )?;
+
+    stdout.flush()
+}
+
+/// Prints the actionable keys available to the user on the `Unanswered` screen
+fn display_unanswered_navigation<W: Write>(mut stdout: W, width: usize) -> io::Result<()> {
+    queue!(stdout, SetAttribute(Attribute::Bold))?;
+    print_wrapped(
+        &mut stdout,
+        "Press [U] to go the next unanswered question  [P] Previous  [Q] Quit",
+        width,
     )?;
 
     stdout.flush()

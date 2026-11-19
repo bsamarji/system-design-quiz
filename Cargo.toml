@@ -19,3 +19,4 @@ directories = "6.0.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1"}
 tempfile = "3.27.0"
+textwrap = "0.16.4"
