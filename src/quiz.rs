@@ -40,6 +40,30 @@ fn correct_answer_count(questions: &[Question], answers: &HashMap<String, Choice
         .count()
 }
 
+/// Get a list of the topics the user needs to review
+pub fn topics_to_review(questions: &[Question], answers: &HashMap<String, Choice>) -> Vec<String> {
+    let mut topics = vec![];
+
+    for question in questions {
+        let topic_name = extract_topic_name(question.id.clone());
+
+        if answers.contains_key(&question.id)
+            && question.correct_answer != answers[&question.id]
+            && !topics.contains(&topic_name)
+        {
+            topics.push(topic_name);
+        }
+    }
+    topics
+}
+
+/// Sanitize the question id to return only the question topic
+fn extract_topic_name(question_id: String) -> String {
+    let mut topic = question_id;
+    topic.truncate(topic.len().saturating_sub(4));
+    topic.replace("_", " ").to_lowercase()
+}
+
 /// Data structure to hold the final quiz score
 pub struct QuizScore {
     /// The number of correct answers
@@ -136,5 +160,26 @@ mod tests {
         assert_eq!(score.total, 2);
         assert_eq!(score.percentage, 100.0);
         assert_eq!(score.grade, 'A');
+    }
+
+    #[test]
+    fn retrieve_list_of_topics_that_need_reviewing() {
+        let mut app = App::build(vec![scalability_question(), cap_theorem_question()]);
+        app.answers.insert("scalability_001".to_string(), Choice::A); // correct answer is A
+        app.answers.insert("cap_theorem_001".to_string(), Choice::D); // correct answer is C
+
+        let topics = topics_to_review(&app.questions, &app.answers);
+
+        assert_eq!(topics.len(), 1);
+        assert_eq!(topics, vec!["cap theorem".to_string()])
+    }
+
+    #[test]
+    fn extract_topic_from_question_id() {
+        let question_id = "cap_theorem_001".to_string();
+
+        let topic = extract_topic_name(question_id);
+
+        assert_eq!(topic, "cap theorem".to_string());
     }
 }

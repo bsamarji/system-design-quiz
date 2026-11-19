@@ -8,7 +8,7 @@ use std::io::{self, Write};
 use crate::{
     app_state::{self, Screen},
     models::Choice,
-    quiz::{QuizScore, calculate_score, evaluate_answer},
+    quiz::{QuizScore, calculate_score, evaluate_answer, topics_to_review},
 };
 use crossterm::{
     cursor::MoveTo,
@@ -134,7 +134,8 @@ pub fn render<W: Write>(app: &mut app_state::App, mut stdout: W) -> io::Result<(
         }
         Screen::Summary => {
             let quiz_score = calculate_score(&app.questions, &app.answers);
-            display_summary(quiz_score, &mut stdout)?;
+            let topics = topics_to_review(&app.questions, &app.answers);
+            display_summary(quiz_score, &mut stdout, topics)?;
             display_summary_navigation(&mut stdout, width)?;
         }
         Screen::Unanswered => {
@@ -236,9 +237,9 @@ fn display_feedback<W: Write>(
 
     queue!(
         stdout,
-        Print(format!("Your answer: {}", user_choice)),
+        Print(format!("• Your answer: {}", user_choice)),
         Print("\r\n\r\n"),
-        Print(format!("Correct answer: {}", correct_choice)),
+        Print(format!("• Correct answer: {}", correct_choice)),
         Print("\r\n\r\n"),
     )?;
 
@@ -258,7 +259,11 @@ fn display_feedback<W: Write>(
 }
 
 /// Prints the quiz summary to stdout
-fn display_summary<W: Write>(score: QuizScore, mut stdout: W) -> io::Result<()> {
+fn display_summary<W: Write>(
+    score: QuizScore,
+    mut stdout: W,
+    topics: Vec<String>,
+) -> io::Result<()> {
     let grade_color = if score.grade == 'A' {
         Color::DarkGreen
     } else if score.grade == 'B' {
@@ -287,28 +292,44 @@ fn display_summary<W: Write>(score: QuizScore, mut stdout: W) -> io::Result<()> 
     queue!(
         stdout,
         SetAttribute(Attribute::Bold),
-        Print(format!("  Total score: {}/{}", score.correct, score.total)),
+        Print(format!("• Total score: {}/{}", score.correct, score.total)),
         SetAttribute(Attribute::Reset),
-        Print("\r\n\r\n"),
+        Print("\r\n"),
     )?;
 
     queue!(
         stdout,
         SetAttribute(Attribute::Bold),
-        Print(format!("  Percentage: {:.1}%", score.percentage)),
+        Print(format!("• Percentage: {:.1}%", score.percentage)),
         SetAttribute(Attribute::Reset),
-        Print("\r\n\r\n"),
+        Print("\r\n"),
     )?;
 
     queue!(
         stdout,
         SetAttribute(Attribute::Bold),
-        Print("  Grade: "),
+        Print("• Grade: "),
         SetForegroundColor(grade_color),
         Print(score.grade),
         SetAttribute(Attribute::Reset),
         Print("\r\n\r\n"),
     )?;
+
+    queue!(
+        stdout,
+        SetAttribute(Attribute::Bold),
+        Print("Topics to review:"),
+        SetAttribute(Attribute::Reset),
+        Print("\r\n"),
+    )?;
+
+    if !topics.is_empty() {
+        for topic in topics {
+            queue!(stdout, Print(format!("• {}", topic)), Print("\r\n"))?;
+        }
+    }
+
+    queue!(stdout, Print("\r\n"))?;
 
     stdout.flush()
 }
