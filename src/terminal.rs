@@ -112,6 +112,12 @@ fn print_wrapped_option<W: Write>(
     Ok(())
 }
 
+/// Finds the x-axis position to center align a line of text given the width
+/// of the terminal
+fn centered_x(width: usize, text: &str) -> u16 {
+    width.saturating_sub(text.chars().count()) as u16 / 2
+}
+
 /// Renders a `Screen` in the terminal's alternate screen.
 ///
 /// The `Screen` is auto-formatted using the display functions.
@@ -122,6 +128,7 @@ pub fn render<W: Write>(app: &mut app_state::App, mut stdout: W) -> io::Result<(
     let width = terminal_content_width();
 
     match app.screen {
+        Screen::Welcome => display_welcome(app, &mut stdout, width)?,
         Screen::Question => {
             display_question(app, &mut stdout, width)?;
             display_question_navigation(&mut stdout, width)?;
@@ -145,6 +152,102 @@ pub fn render<W: Write>(app: &mut app_state::App, mut stdout: W) -> io::Result<(
     }
 
     Ok(())
+}
+
+/// Prints the welcome screen to stdout.
+///
+/// Informs the player of the state of the quiz and if there is an ongoing
+/// quiz.
+fn display_welcome<W: Write>(app: &app_state::App, mut stdout: W, width: usize) -> io::Result<()> {
+    queue!(stdout, Clear(ClearType::All))?;
+
+    let start_y = 4;
+
+    let text = "SYSTEM DESIGN";
+    queue!(
+        stdout,
+        MoveTo(centered_x(width, text), start_y),
+        SetAttribute(Attribute::Bold),
+        SetForegroundColor(Color::Green),
+        Print(text),
+    )?;
+
+    let text = "---- Q U I Z ----";
+    queue!(
+        stdout,
+        MoveTo(centered_x(width, text), start_y + 1),
+        Print(text),
+    )?;
+
+    queue!(stdout, SetAttribute(Attribute::Reset))?;
+
+    let text = "Master the trade-offs behind scalable systems";
+    queue!(
+        stdout,
+        MoveTo(centered_x(width, text), start_y + 3),
+        SetAttribute(Attribute::Bold),
+        Print(text),
+        SetAttribute(Attribute::Reset),
+    )?;
+
+    if app.answers.is_empty() {
+        let text = "[ ENTER ] Start quiz  [Q] Quit";
+        queue!(
+            stdout,
+            MoveTo(centered_x(width, text), start_y + 5),
+            SetAttribute(Attribute::Bold),
+            SetForegroundColor(Color::Green),
+            Print("[ ENTER ] "),
+            SetAttribute(Attribute::Reset),
+            SetAttribute(Attribute::Bold),
+            Print("Start quiz  [Q] Quit"),
+            SetAttribute(Attribute::Reset),
+        )?;
+
+        let text = "• No Progress Found •";
+        queue!(
+            stdout,
+            MoveTo(centered_x(width, text), start_y + 7),
+            Print(text),
+        )?;
+    } else {
+        let text = "[ ENTER ] Continue quiz";
+        queue!(
+            stdout,
+            MoveTo(centered_x(width, text), start_y + 5),
+            SetAttribute(Attribute::Bold),
+            SetForegroundColor(Color::Green),
+            Print("[ ENTER ] "),
+            SetAttribute(Attribute::Reset),
+            SetAttribute(Attribute::Bold),
+            Print("Continue quiz"),
+            SetAttribute(Attribute::Reset),
+        )?;
+
+        let text = "[R] Reset quiz  [Q] Quit";
+        queue!(
+            stdout,
+            MoveTo(centered_x(width, text), start_y + 7),
+            SetAttribute(Attribute::Bold),
+            Print(text),
+            SetAttribute(Attribute::Reset),
+        )?;
+
+        let questions_answered = app.answers.len();
+        let total_question_count = app.questions.len();
+
+        let text = format!(
+            "Progress Found • Answered {} out of {}",
+            questions_answered, total_question_count
+        );
+        queue!(
+            stdout,
+            MoveTo(centered_x(width, &text), start_y + 9),
+            Print(text),
+        )?;
+    }
+
+    stdout.flush()
 }
 
 /// Prints a question to stdout.
