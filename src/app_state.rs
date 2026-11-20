@@ -12,6 +12,7 @@ use crate::models::{Choice, Question, QuizProgress};
 /// Determines what to display and what actions are available
 #[derive(Debug, PartialEq, Eq)]
 pub enum Screen {
+    Welcome,
     Question,
     Feedback,
     Summary,
@@ -49,7 +50,7 @@ impl App {
         Self {
             questions,
             current_question_index: 0,
-            screen: Screen::Question,
+            screen: Screen::Welcome,
             should_quit: false,
             answers: HashMap::new(),
         }
@@ -59,16 +60,13 @@ impl App {
     pub fn build_from_progress(questions: Vec<Question>, progress: QuizProgress) -> Self {
         let current_question_index = get_current_question_index(&questions, &progress);
 
-        let mut app = Self {
+        Self {
             questions,
             current_question_index,
-            screen: Screen::Question,
+            screen: Screen::Welcome,
             should_quit: false,
             answers: progress.answers,
-        };
-
-        app.update_screen_for_current_question();
-        app
+        }
     }
 
     /// Construct the current `QuizProgress` from the app state
@@ -179,19 +177,30 @@ impl App {
                 KeyCode::Char('c') if key_event.modifiers.contains(KeyModifiers::CONTROL) => {
                     self.quit();
                 }
-                KeyCode::Char('a') => {
+                KeyCode::Enter if self.screen == Screen::Welcome => {
+                    self.update_screen_for_current_question();
+                }
+                KeyCode::Char('a')
+                    if self.screen == Screen::Question || self.screen == Screen::Feedback =>
+                {
                     self.answer_current_question(Choice::A);
                 }
-                KeyCode::Char('b') => {
+                KeyCode::Char('b')
+                    if self.screen == Screen::Question || self.screen == Screen::Feedback =>
+                {
                     self.answer_current_question(Choice::B);
                 }
-                KeyCode::Char('c') => {
+                KeyCode::Char('c')
+                    if self.screen == Screen::Question || self.screen == Screen::Feedback =>
+                {
                     self.answer_current_question(Choice::C);
                 }
-                KeyCode::Char('d') => {
+                KeyCode::Char('d')
+                    if self.screen == Screen::Question || self.screen == Screen::Feedback =>
+                {
                     self.answer_current_question(Choice::D);
                 }
-                KeyCode::Char('n') => {
+                KeyCode::Char('n') if self.screen != Screen::Welcome => {
                     let is_on_last_question =
                         self.current_question_index + 1 == self.questions.len();
                     if is_on_last_question && self.all_questions_answered() {
@@ -203,7 +212,7 @@ impl App {
                         self.update_screen_for_current_question();
                     }
                 }
-                KeyCode::Char('p') => {
+                KeyCode::Char('p') if self.screen != Screen::Welcome => {
                     if self.screen == Screen::Summary || self.screen == Screen::Unanswered {
                         self.update_screen_for_current_question();
                     } else {
@@ -211,7 +220,9 @@ impl App {
                         self.update_screen_for_current_question();
                     }
                 }
-                KeyCode::Char('r') if self.screen == Screen::Summary => {
+                KeyCode::Char('r')
+                    if self.screen == Screen::Summary || self.screen == Screen::Welcome =>
+                {
                     self.reset_quiz();
                 }
                 KeyCode::Char('u') if self.screen == Screen::Unanswered => {
@@ -248,7 +259,7 @@ mod tests {
         let test_app = App::build(vec![scalability_question()]);
 
         assert_eq!(test_app.questions[0], scalability_question());
-        assert_eq!(test_app.screen, Screen::Question);
+        assert_eq!(test_app.screen, Screen::Welcome);
         assert!(!test_app.should_quit);
         assert_eq!(test_app.current_question_index, 0);
         assert!(test_app.answers.is_empty());
@@ -269,7 +280,7 @@ mod tests {
             test_app.questions,
             vec![scalability_question(), cap_theorem_question()]
         );
-        assert_eq!(test_app.screen, Screen::Question);
+        assert_eq!(test_app.screen, Screen::Welcome);
         assert!(!test_app.should_quit);
         assert_eq!(test_app.current_question_index, 1);
         assert!(!test_app.answers.is_empty());
@@ -360,7 +371,7 @@ mod tests {
         let mut test_app = App::build_from_progress(questions, progress);
 
         assert_eq!(test_app.current_question_index, 1);
-        assert_eq!(test_app.screen, Screen::Feedback);
+        assert_eq!(test_app.screen, Screen::Welcome);
         assert!(!test_app.answers.is_empty());
 
         test_app.reset_quiz();
@@ -381,6 +392,7 @@ mod tests {
 
         for (key, expected_choice) in cases {
             let mut test_app = App::build(vec![scalability_question()]);
+            test_app.screen = Screen::Question;
             test_app.handle_event(KeyEvent::new(KeyCode::Char(key), KeyModifiers::NONE));
 
             assert_eq!(test_app.current_answer(), Some(expected_choice));
@@ -395,6 +407,7 @@ mod tests {
         let expected_choice = Choice::A;
 
         let mut test_app = App::build(vec![scalability_question()]);
+        test_app.screen = Screen::Question;
 
         for (key, _) in cases {
             test_app.handle_event(KeyEvent::new(KeyCode::Char(key), KeyModifiers::NONE));
@@ -403,20 +416,6 @@ mod tests {
             assert_eq!(test_app.screen, Screen::Feedback);
             assert_eq!(test_app.answers["scalability_001"], expected_choice);
         }
-    }
-
-    #[test]
-    fn load_progress_whose_current_question_has_answer() {
-        let answers = HashMap::from([("scalability_001".to_string(), Choice::A)]);
-        let progress = QuizProgress {
-            answers,
-            current_question_id: "scalability_001".to_string(),
-        };
-        let questions = vec![scalability_question(), cap_theorem_question()];
-
-        let test_app = App::build_from_progress(questions, progress);
-
-        assert_eq!(test_app.screen, Screen::Feedback);
     }
 
     #[test]
@@ -439,6 +438,7 @@ mod tests {
     #[test]
     fn screen_is_derived_from_current_answer() {
         let mut test_app = App::build(vec![scalability_question(), cap_theorem_question()]);
+        test_app.screen = Screen::Question;
         test_app.handle_event(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));
         test_app.handle_event(KeyEvent::new(KeyCode::Char('n'), KeyModifiers::NONE));
 
@@ -496,6 +496,7 @@ mod tests {
     #[test]
     fn n_moves_to_next_question() {
         let mut test_app = App::build(vec![scalability_question(), cap_theorem_question()]);
+        test_app.screen = Screen::Question;
 
         test_app.handle_event(KeyEvent::new(KeyCode::Char('n'), KeyModifiers::NONE));
 
@@ -505,6 +506,7 @@ mod tests {
     #[test]
     fn p_moves_to_previous_question() {
         let mut test_app = App::build(vec![scalability_question(), cap_theorem_question()]);
+        test_app.screen = Screen::Question;
         test_app.current_question_index = 1;
 
         test_app.handle_event(KeyEvent::new(KeyCode::Char('p'), KeyModifiers::NONE));
@@ -564,7 +566,7 @@ mod tests {
 
         assert_eq!(test_app.current_question_index, 0);
         assert!(!test_app.should_quit);
-        assert_eq!(test_app.screen, Screen::Question);
+        assert_eq!(test_app.screen, Screen::Welcome);
         assert!(test_app.answers.is_empty());
     }
 }
