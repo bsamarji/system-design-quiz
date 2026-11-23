@@ -10,8 +10,14 @@ documentation = "https://docs.rs/system_design_quiz"
 homepage = "https://github.com/bsamarji/system_design_quiz"
 repository = "https://github.com/bsamarji/system_design_quiz"
 readme = "README.md"
-keywords = ["system design", "cli", "quiz", "learning"]
+keywords = ["system-design", "cli", "quiz", "learning"]
 categories = ["command-line-interface", "command-line-utilities"]
+
+[package.metadata.wix]
+upgrade-guid = "EF75B890-6B00-44F6-B6AE-EFF7613697D6"
+path-guid = "0FEC360E-CCB3-40BC-84C8-B3148FA890FE"
+license = false
+eula = false
 
 [dependencies]
 crossterm = "0.29.0"
@@ -20,3 +26,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1"}
 tempfile = "3.27.0"
 textwrap = "0.16.4"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
