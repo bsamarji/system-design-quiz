@@ -549,7 +549,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "system_design_quiz"
+name = "system-design-quiz"
 version = "0.1.0"
 dependencies = [
  "crossterm",

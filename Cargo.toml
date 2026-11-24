@@ -1,5 +1,5 @@
 [package]
-name = "system_design_quiz"
+name = "system-design-quiz"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.98.1"
@@ -12,6 +12,10 @@ repository = "https://github.com/bsamarji/system_design_quiz"
 readme = "README.md"
 keywords = ["system-design", "cli", "quiz", "learning"]
 categories = ["command-line-interface", "command-line-utilities"]
+
+[[bin]]
+name = "sdquiz"
+path = "src/main.rs"
 
 [package.metadata.wix]
 upgrade-guid = "EF75B890-6B00-44F6-B6AE-EFF7613697D6"

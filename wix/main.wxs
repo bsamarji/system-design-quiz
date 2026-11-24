@@ -60,7 +60,7 @@
 
     <Product
         Id='*'
-        Name='system_design_quiz'
+        Name='system-design-quiz'
         UpgradeCode='EF75B890-6B00-44F6-B6AE-EFF7613697D6'
         Manufacturer='Ben Samarji'
         Language='1033'
@@ -83,11 +83,11 @@
             DowngradeErrorMessage='A newer version of [ProductName] is already installed. Setup will now exit.'/>
 
         <Media Id='1' Cabinet='media1.cab' EmbedCab='yes' DiskPrompt='CD-ROM #1'/>
-        <Property Id='DiskPrompt' Value='system_design_quiz Installation'/>
+        <Property Id='DiskPrompt' Value='system-design-quiz Installation'/>
 
         <Directory Id='TARGETDIR' Name='SourceDir'>
             <Directory Id='$(var.PlatformProgramFilesFolder)' Name='PFiles'>
-                <Directory Id='APPLICATIONFOLDER' Name='system_design_quiz'>
+                <Directory Id='APPLICATIONFOLDER' Name='system-design-quiz'>
                     
                     <!--
                       Enabling the license sidecar file in the installer is a four step process:
@@ -123,9 +123,9 @@
                         <Component Id='binary0' Guid='*'>
                             <File
                                 Id='exe0'
-                                Name='system_design_quiz.exe'
+                                Name='sdquiz.exe'
                                 DiskId='1'
-                                Source='$(var.CargoTargetBinDir)\system_design_quiz.exe'
+                                Source='$(var.CargoTargetBinDir)\sdquiz.exe'
                                 KeyPath='yes'/>
                         </Component>
                     </Directory>
