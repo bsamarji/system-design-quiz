@@ -119,10 +119,23 @@ mod tests {
     }
 
     #[test]
-    fn loads_the_scalability_question() {
+    fn bundled_questions_have_unique_ids_and_complete_content() {
         let questions = load_questions().expect("The bundled question bank should be valid JSON");
 
-        assert!(questions.contains(&scalability_question()));
+        let mut ids = std::collections::HashSet::new();
+        for question in &questions {
+            assert!(ids.insert(&question.id));
+            assert!(!question.prompt.trim().is_empty());
+            assert!(!question.explanation.trim().is_empty());
+            let options: std::collections::HashSet<_> = question.options.iter().collect();
+            assert_eq!(options.len(), 4);
+            assert!(
+                question
+                    .options
+                    .iter()
+                    .all(|option| !option.trim().is_empty())
+            );
+        }
     }
 
     #[test]

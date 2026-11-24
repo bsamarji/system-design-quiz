@@ -1,301 +1,518 @@
 [
   {
     "id": "scalability_001",
-    "prompt": "A service is scalable if...",
+    "prompt": "A finance team uses an internal dashboard to generate monthly reports. Each report takes 20 seconds with one active user and still takes 20 seconds with 100 concurrent users. The target is 2 seconds. What should the team investigate first?",
     "options": [
-      "It can handle increased workload by adding resources while maintaining acceptable performance",
-      "It responds quickly to requests when the workload is low",
-      "It continues operating when an individual server fails",
-      "It automatically restarts after a software crash"
+      "The work performed by each report",
+      "The number of load-balancer replicas",
+      "The distribution of users across regions",
+      "The number of idle application instances"
     ],
     "correct_answer": "A",
-    "explanation": "Scalability is a service's ability to handle growing workload by adding resources, such as CPU, memory, or additional servers, while maintaining acceptable performance. For example, adding servers might allow it to support more concurrent users without unacceptable increases in response time. The improvement does not have to be exactly proportional to the resources added; that stronger property is called linear scalability."
+    "explanation": "The delay exists under light load, so investigate per-request work such as queries and computation. Additional instances primarily help concurrent capacity."
   },
   {
     "id": "scalability_002",
-    "prompt": "A service responds quickly for one user but slows significantly as concurrent traffic grows. What is the primary issue?",
-    "options": ["Availability, because some requests are slower", "Scalability, because performance degrades as load grows", "Consistency, because users receive responses at different times", "Durability, because traffic exceeds one user's workload"],
-    "correct_answer": "B",
-    "explanation": "A scalability problem emerges as load grows, even though the system performs well for a single user. A performance problem would also be visible under light load."
+    "prompt": "An online shop adds application servers to handle a traffic increase. Customers now sometimes appear logged out when their next request reaches a different server, because sessions are stored in server memory. Which change lets any server handle the next request?",
+    "options": [
+      "Increase the session expiration time",
+      "Route requests using least connections",
+      "Move session state to a shared store",
+      "Increase the load-balancer timeout"
+    ],
+    "correct_answer": "C",
+    "explanation": "A shared session store makes session state available across instances. Routing policies or longer timeouts do not make server-local state accessible elsewhere."
   },
   {
     "id": "scalability_003",
-    "prompt": "Which application design best supports horizontal scaling without requiring sticky sessions?",
-    "options": ["Keep each user's session only in one application server's memory", "Replicate in-memory sessions by broadcasting every request to all servers", "Keep application servers stateless and store sessions in a shared data store", "Use round-robin routing while retaining server-local sessions"],
+    "prompt": "A retailer doubles its web server count before a sale, but completed requests per second barely increase. During a load test, database CPU remains at 100% while web CPU averages 25%. Which action best targets the measured bottleneck?",
+    "options": [
+      "Double the web server count again",
+      "Increase the web connection pool",
+      "Profile and reduce expensive database work",
+      "Add a second load balancer"
+    ],
     "correct_answer": "C",
-    "explanation": "Stateless application servers can handle requests interchangeably. Shared session storage avoids coupling a user to one instance and makes scaling and failover simpler."
+    "explanation": "The database is saturated while web capacity is spare. Query tuning targets the measured constraint; more upstream concurrency may worsen contention."
   },
   {
     "id": "cap_theorem_001",
-    "prompt": "According to the CAP theorem, what does consistency mean?",
-    "options": ["Every request receives a response, even if it is stale", "The system continues operating across a network partition", "Every read receives the most recent write or an error", "All replicas eventually converge if writes stop"],
-    "correct_answer": "C",
-    "explanation": "In CAP, consistency means every read observes the most recent write or receives an error. Availability and partition tolerance describe different guarantees."
+    "prompt": "A ticketing service accepts bookings in two regions. A network failure separates the regions while both have the final seat listed as available. The seat must be sold at most once. Which policy preserves this requirement?",
+    "options": [
+      "Accept both sales and reconcile later",
+      "Allow sales only where exclusive ownership can be verified",
+      "Accept sales using each region's cached inventory",
+      "Accept both sales with distinct reservation IDs"
+    ],
+    "correct_answer": "B",
+    "explanation": "Exclusive ownership prevents competing sales of the same seat. During a partition, a region unable to verify that authority must reject or defer the sale. Unique IDs do not protect inventory."
   },
   {
     "id": "cap_theorem_002",
-    "prompt": "During a network partition, what trade-off does an AP system make?",
-    "options": ["It rejects requests until every replica agrees", "It guarantees linearizable reads from every replica", "It stops accepting writes but continues serving only cached reads", "It remains available but can return data that is not the latest"],
-    "correct_answer": "D",
-    "explanation": "An AP system favors availability and partition tolerance. It continues responding during a partition, although a response might not contain the latest write."
+    "prompt": "A shared shopping-list app serves families in two regions. During a network partition, users in either region must still be able to edit their lists; conflicting edits can be merged after connectivity returns. Which design meets these requirements?",
+    "options": [
+      "Require both regions to acknowledge each edit",
+      "Accept local edits and reconcile replicas later",
+      "Send every edit to a single unreachable leader",
+      "Reject edits whenever replica versions differ"
+    ],
+    "correct_answer": "B",
+    "explanation": "Local acceptance preserves availability during the partition and allows reconciliation afterward. Requiring cross-region agreement would block some edits."
   },
   {
     "id": "cap_theorem_003",
-    "prompt": "A shopping cart must remain writable during a partition and can reconcile conflicting updates later. Which CAP design best fits?",
-    "options": ["AP, because it favors availability and can reconcile after the partition", "CP, because all writes should wait for replica agreement", "CA, because network partitions can be excluded from the design", "CP, because stale data must always be preferred to failed requests"],
+    "prompt": "An inventory API promises linearizable reads so callers can rely on completed stock updates. During a network partition, a replica loses contact with the leader and cannot establish that its copy is current. How should it handle a read?",
+    "options": [
+      "Reject or defer the read until freshness can be established",
+      "Return its local value with the current timestamp",
+      "Return its local value after a fixed short delay",
+      "Return the value held by the nearest reachable replica"
+    ],
     "correct_answer": "A",
-    "explanation": "The requirement prioritizes availability during a partition and accepts temporary inconsistency, which matches AP. Conflicts must be reconciled when replicas reconnect."
+    "explanation": "A reachable replica or a short wait does not establish freshness. Preserving linearizability can require declining a read when coordination is unavailable."
   },
   {
     "id": "consistency_patterns_001",
-    "prompt": "Which statement best describes eventual consistency?",
-    "options": ["Every read immediately sees the latest successful write", "Replicas may briefly disagree but converge over time", "Reads are permitted to miss writes indefinitely", "All replicas acknowledge a write before it succeeds"],
-    "correct_answer": "B",
-    "explanation": "With eventual consistency, replicas are commonly updated asynchronously. Reads might temporarily return old data, but replicas converge over time."
+    "prompt": "A customer updates their display name, receives a success response, then sees the old name after refreshing the page. Writes go to a primary and reads use asynchronous replicas. Which routing change gives this customer read-your-writes behavior?",
+    "options": [
+      "Route refreshes to the least busy replica",
+      "Route refreshes randomly across replicas",
+      "Route refreshes to the closest region",
+      "Route refreshes to the primary that committed the update"
+    ],
+    "correct_answer": "D",
+    "explanation": "The committing primary has the update. Random, nearby, or lightly loaded asynchronous replicas may still lag."
   },
   {
     "id": "consistency_patterns_002",
-    "prompt": "Which consistency model is often acceptable for live voice or video where waiting to recover a missed moment would hurt the experience?",
-    "options": ["Strong consistency", "Eventual consistency with guaranteed replay", "Weak consistency", "Serializable consistency"],
-    "correct_answer": "C",
-    "explanation": "Weak consistency uses a best-effort approach: a read may not observe a recent write. It can suit real-time media where continuing is more useful than waiting or replaying lost data."
+    "prompt": "A sales dashboard is used by teams in several regions. During normal operation, replication lag is a few seconds, which is acceptable for these reports; fast local reads matter more than immediately current totals. Writes must also be acknowledged without waiting for another region. Which approach fits these requirements?",
+    "options": [
+      "Synchronously coordinate every read across regions",
+      "Serve local asynchronously replicated totals",
+      "Route all reads to a remote primary",
+      "Wait for every region before acknowledging updates"
+    ],
+    "correct_answer": "B",
+    "explanation": "Local asynchronous replicas trade temporary staleness for low read latency. Global coordination adds delay that this dashboard does not require."
   },
   {
     "id": "consistency_patterns_003",
-    "prompt": "Why can strong consistency increase latency or reduce availability in a distributed system?",
-    "options": ["It requires every read to come from a client-side cache", "It prevents replicas from storing the same data", "It acknowledges writes before any replica receives them", "It may require synchronous coordination before an operation succeeds"],
-    "correct_answer": "D",
-    "explanation": "Strong consistency commonly requires replicas to coordinate synchronously. Network delay or an unavailable replica can therefore delay or reject an operation."
+    "prompt": "A team tests an eventually consistent product catalogue by interrupting replication and making updates in both regions. After writes stop and communication is restored, which outcome would violate the store's consistency promise?",
+    "options": [
+      "One replica briefly serves an older value",
+      "Two replicas receive updates in different orders",
+      "Replicas permanently retain different final values",
+      "A read immediately after a write sees an older value"
+    ],
+    "correct_answer": "C",
+    "explanation": "Eventual consistency requires convergence once updates cease and propagation can complete. Temporary differences and immediate stale reads are compatible with that promise."
   },
   {
     "id": "availability_patterns_001",
-    "prompt": "Which pair of patterns directly supports high availability?",
-    "options": ["Failover and replication", "Sharding and denormalization", "Caching and compression", "Batching and polling"],
+    "prompt": "A booking service has two replicas, but an outage of their shared power supply takes both offline. The team wants the service to survive that same type of failure next time. Which deployment change addresses the cause?",
+    "options": [
+      "Place replicas in separate power failure domains",
+      "Increase heartbeat frequency between machines",
+      "Add more machines to the same power supply",
+      "Increase the client request timeout"
+    ],
     "correct_answer": "A",
-    "explanation": "Failover provides a replacement when an active component fails, while replication maintains additional copies or service instances."
+    "explanation": "Redundancy must span the failures it is meant to tolerate. More machines sharing the same power dependency remain vulnerable to one outage."
   },
   {
     "id": "availability_patterns_002",
-    "prompt": "What distinguishes active-passive failover from active-active failover?",
-    "options": ["Both active-passive servers serve normal traffic simultaneously", "The passive server waits on standby and takes over after an active failure", "The passive server accepts writes while the active server serves reads", "Traffic is split equally, but only the passive server sends heartbeats"],
+    "prompt": "An order database acknowledges writes before sending them to its standby. After the primary fails permanently, the standby is promoted. What should the team expect when checking orders that received a success response shortly before the failure?",
+    "options": [
+      "Every acknowledged write is present on the standby",
+      "Some acknowledged writes may be absent after failover",
+      "Every replica must reject reads until the primary returns",
+      "The standby can recover missing writes from heartbeats"
+    ],
     "correct_answer": "B",
-    "explanation": "In active-passive failover, only the active server normally handles traffic. The standby monitors it, often using heartbeats, and takes over after a failure."
+    "explanation": "Asynchronous replication leaves a window where acknowledged writes exist only on the failed primary. Heartbeats detect liveness; they do not recover missing data."
   },
   {
     "id": "availability_patterns_003",
-    "prompt": "Two independent replicas are each 99.9% available, and either can serve a request. What is their approximate combined availability?",
-    "options": ["99.8%", "99.9%", "99.99%", "99.9999%"],
+    "prompt": "A team is estimating availability for two redundant search servers. Each is available 99% of the time, their failures are independent, and either can serve all traffic. Assuming perfect routing, what is their combined availability?",
+    "options": [
+      "98.01%",
+      "99%",
+      "99.5%",
+      "99.99%"
+    ],
     "correct_answer": "D",
-    "explanation": "For independent components in parallel, availability is 1 - (1 - 0.999)^2, or 99.9999%. This assumes their failures are independent."
+    "explanation": "Both must fail for the service to be unavailable: 0.01 × 0.01 = 0.0001. Availability is therefore 99.99%. Multiplying availabilities describes a system needing both servers."
   },
   {
     "id": "dns_001",
-    "prompt": "What is the primary purpose of DNS?",
-    "options": ["Cache static website content at edge locations", "Select an application server using HTTP headers", "Translate domain names into network addresses", "Encrypt traffic between a client and origin"],
-    "correct_answer": "C",
-    "explanation": "DNS translates human-readable names such as www.example.com into network addresses that clients can contact."
+    "prompt": "A team rolls out a new backend using weighted DNS. Both backends are healthy. Over one hour, 10% of authoritative DNS answers point to the new backend, but it handles 18% of HTTP requests. How can both measurements be correct?",
+    "options": [
+      "The weights divide new TCP connections, and each connection can carry several requests",
+      "A cached DNS answer can serve many clients, each making a different number of requests",
+      "The weights divide unique client IPs, and some clients make more requests than others",
+      "The weights divide response bytes, and requests can produce responses of different sizes"
+    ],
+    "correct_answer": "B",
+    "explanation": "The DNS server applies the weights when choosing an address for a DNS reply. A busy recursive resolver can reuse one reply for many clients until it expires. If those clients generate a large share of requests, the selected backend can receive more than its share of DNS answers would suggest."
   },
   {
     "id": "dns_002",
-    "prompt": "Which DNS record maps a hostname directly to an IPv4 address?",
-    "options": ["NS", "MX", "CNAME", "A"],
+    "prompt": "A team plans to move its website to a new address. It wants cached copies of the old address to expire within five minutes after the switch. The current TTL is one day. Assuming resolvers honor TTLs, which preparation best supports that goal?",
+    "options": [
+      "Lower the TTL when the old server is shut down",
+      "Raise the TTL before publishing the new address",
+      "Lower the TTL only on the new address after migration",
+      "Set the TTL to five minutes at least a day before the switch"
+    ],
     "correct_answer": "D",
-    "explanation": "An A record maps a name to an IPv4 address. MX identifies mail servers, NS identifies name servers, and CNAME aliases one name to another."
+    "explanation": "Lowering the TTL a day in advance gives entries cached with the original TTL time to expire. Even a resolver that caches the old address just before the switch can reuse it for only five more minutes. The resolver can fetch the new address when it next needs it."
   },
   {
     "id": "dns_003",
-    "prompt": "After changing a DNS record, some users still reach the old server. What is the most likely cause?",
-    "options": ["Resolvers or clients are using cached records whose TTL has not expired", "Authoritative servers convert A records to CNAME records during propagation", "The new IP address cannot be used until every recursive resolver restarts", "DNS guarantees immediate updates, so the cause must be the application cache"],
+    "prompt": "A website distributes traffic using DNS answers containing backend addresses. When one backend fails, clients with its address cached keep trying it for 30 minutes. For future failures, which architecture avoids depending on clients refreshing DNS to select a healthy backend?",
+    "options": [
+      "Put a redundant, health-checking load-balancer endpoint behind the DNS name",
+      "Add another hostname that points to the failed server",
+      "Increase the number of authoritative DNS servers",
+      "Change the record type from A to CNAME with the same TTL"
+    ],
     "correct_answer": "A",
-    "explanation": "DNS mappings are cached by resolvers, operating systems, and browsers. Until cached entries expire according to their TTL, some clients can continue using the old value."
+    "explanation": "A stable balancing endpoint can route away from failed backends without requiring clients to refresh DNS. More authoritative servers improve DNS service availability, not cached backend failover."
   },
   {
     "id": "cdn_001",
-    "prompt": "What is the main benefit of serving suitable content through a CDN?",
-    "options": ["It makes origin storage unnecessary", "It reduces user latency and origin load by serving content from nearby edges", "It guarantees that dynamic data is strongly consistent", "It replaces DNS-based request routing"],
-    "correct_answer": "B",
-    "explanation": "A CDN uses geographically distributed proxy servers to serve content nearer to users, reducing latency and the number of requests reaching origin servers."
+    "prompt": "A photography site serves public images from a single origin. Users on another continent experience long network delays, and many request the same images. Which change most directly reduces distance-related latency for repeat requests?",
+    "options": [
+      "Cache the images at geographically distributed CDN edges",
+      "Add origin servers in the same data center",
+      "Increase the origin database connection pool",
+      "Extend the browser's connection timeout"
+    ],
+    "correct_answer": "A",
+    "explanation": "Edge caching serves reusable content closer to users and reduces origin traffic. More capacity in the same location does not remove the long network path."
   },
   {
     "id": "cdn_002",
-    "prompt": "How does a pull CDN obtain an object that is missing from an edge cache?",
-    "options": ["The publisher must upload the object to every edge before any request", "The edge asks another user to supply the object", "The edge fetches the object from the origin after the cache miss", "The edge reconstructs the object from its DNS record"],
-    "correct_answer": "C",
-    "explanation": "A pull CDN fetches an object from the origin when it is first requested and missing from the edge cache. Later requests can use the cached copy."
+    "prompt": "A company deploys a new logo by replacing /logo.png at its origin, but the CDN still serves cached copies of the previous logo. The team can update page references as part of the deployment. Which approach lets those updated pages request the new logo immediately?",
+    "options": [
+      "Publish a versioned filename and update page references",
+      "Increase the TTL on /logo.png",
+      "Restart the origin's database connection pool",
+      "Add origin replicas with the same /logo.png path"
+    ],
+    "correct_answer": "A",
+    "explanation": "A new URL creates a distinct cache key. Existing cached objects can remain until expiry while updated pages request the new asset."
   },
   {
     "id": "cdn_003",
-    "prompt": "A site has a small catalogue of rarely changing files and wants precise control over when they reach edge locations. Which approach best fits?",
-    "options": ["A pull CDN with extremely short TTLs", "A pull CDN that never caches misses", "A write-behind application cache", "A push CDN where changed files are uploaded explicitly"],
+    "prompt": "A photo archive adopts a pull CDN, expecting a large reduction in origin downloads. At each edge, most requests are for an image that edge has never served. Why might origin traffic remain high?",
+    "options": [
+      "The CDN requires every cache hit to download the full origin object",
+      "The origin must push each image before a pull cache can serve it",
+      "DNS TTLs prevent edges from storing image responses",
+      "Most requests miss because edge-local reuse is low"
+    ],
     "correct_answer": "D",
-    "explanation": "A push CDN lets the publisher upload new or changed content and control expiry. It works well for smaller, infrequently updated content sets."
+    "explanation": "Pull caching saves origin work when an edge can reuse an object. A long tail with little repeat access can produce many first-request misses despite a large cache."
   },
   {
     "id": "load_balancers_001",
-    "prompt": "What is a primary responsibility of a load balancer?",
-    "options": ["Distribute requests across healthy computing resources", "Resolve domain names using authoritative records", "Store durable copies of application data", "Synchronize write conflicts between database replicas"],
-    "correct_answer": "A",
-    "explanation": "A load balancer distributes incoming requests across resources and can avoid sending traffic to unhealthy or overloaded servers."
+    "prompt": "A checkout backend accepts TCP connections, but a broken dependency causes every checkout request to fail. The load balancer still considers the backend healthy. Which check best detects this failure before more traffic is sent there?",
+    "options": [
+      "Check whether its hostname resolves",
+      "Check whether its network interface is up",
+      "Check a representative application readiness endpoint",
+      "Check whether its TCP port accepts connections"
+    ],
+    "correct_answer": "C",
+    "explanation": "Application readiness can reveal failures above the transport layer. A listening port or working DNS does not show that the handler can serve requests."
   },
   {
     "id": "load_balancers_002",
-    "prompt": "Which information can a Layer 7 load balancer use that a Layer 4 load balancer generally cannot?",
-    "options": ["Source and destination IP addresses", "HTTP paths, headers, and cookies", "Source and destination TCP ports", "Transport protocol information"],
-    "correct_answer": "B",
-    "explanation": "Layer 7 balancing inspects application-level information such as HTTP paths, headers, and cookies. Layer 4 generally routes using transport-level addresses and ports."
+    "prompt": "A shop uses one hostname for its website. Requests to /images must reach image servers, while /checkout must reach checkout servers. Which routing capability does its load balancer need?",
+    "options": [
+      "Routing based on destination TCP port",
+      "Routing based on source IP address",
+      "Routing based on HTTP path",
+      "Routing based on connection count"
+    ],
+    "correct_answer": "C",
+    "explanation": "The path is application-layer information, so Layer 7 routing is needed. Transport addresses and connection counts cannot distinguish these URL paths."
   },
   {
     "id": "load_balancers_003",
-    "prompt": "Why are multiple load balancers often deployed in active-passive or active-active mode?",
-    "options": ["To synchronize session state across all backend servers", "To make backend health checks unnecessary", "To avoid a single point of failure in the balancing tier", "To guarantee round-robin routing during every failure"],
-    "correct_answer": "C",
-    "explanation": "A single load balancer can itself fail. Redundant load balancers improve availability, although they add coordination and operational complexity."
+    "prompt": "A service runs on identical servers and uses one active request per connection. Some requests take 10 milliseconds; others take 30 seconds. Round robin leaves uneven numbers of in-flight requests on the servers. Which routing policy best uses current load to reduce that imbalance?",
+    "options": [
+      "Choose the server with the fewest active connections",
+      "Choose servers with equal fixed round-robin weights",
+      "Choose a server by hashing the customer's session ID",
+      "Choose the server with the fewest requests since startup"
+    ],
+    "correct_answer": "A",
+    "explanation": "Least-connections routing considers outstanding connections, a useful proxy for load under these assumptions. Round robin ignores request duration, and affinity can preserve uneven assignments."
   },
   {
     "id": "reverse_proxy_001",
-    "prompt": "Where is a reverse proxy normally positioned?",
-    "options": ["On the client to hide the client's identity from every destination", "Between database storage and its indexes", "Inside the recursive DNS resolver", "In front of one or more origin servers"],
-    "correct_answer": "D",
-    "explanation": "A reverse proxy accepts client requests on behalf of backend servers and forwards each request to an appropriate origin."
+    "prompt": "A team rotates its public TLS certificate frequently. Today, the certificate is deployed with every application instance. Which arrangement lets the team rotate that certificate in one front-end tier while keeping application deployments independent?",
+    "options": [
+      "Pass TLS through the proxy and rotate certificates on backends",
+      "Terminate public TLS at the proxy and rotate its certificate",
+      "Distribute one shared certificate with each backend release",
+      "Terminate TLS on backends using certificates for each instance"
+    ],
+    "correct_answer": "B",
+    "explanation": "A reverse proxy can own client-facing TLS certificates and their rotation. Backend TLS can still be used separately if the internal connection also needs encryption."
   },
   {
     "id": "reverse_proxy_002",
-    "prompt": "Which responsibility can a reverse proxy take away from application servers?",
-    "options": ["TLS termination and response caching", "Relational schema normalization", "Resolving replica write conflicts", "Assigning DNS authoritative zones"],
-    "correct_answer": "A",
-    "explanation": "Reverse proxies can terminate TLS, cache content, compress responses, and hide backend topology, reducing work performed by application servers."
+    "prompt": "A customer portal's reverse proxy caches pages using only the URL as the key. Two logged-in customers request /account, and one receives the other's page. Until a user-aware caching design is available, which policy prevents this exposure?",
+    "options": [
+      "Cache account pages for a shorter period using the same URL key",
+      "Separate the cache by browser type while retaining account pages",
+      "Purge each account page when that customer signs out",
+      "Skip shared-cache lookup and storage for every /account request"
+    ],
+    "correct_answer": "D",
+    "explanation": "A shared URL-only cache mixes personalized responses. Disabling shared caching is a direct safe policy; correct user-specific cache separation would require additional design."
   },
   {
     "id": "reverse_proxy_003",
-    "prompt": "Which statement most accurately describes the relationship between reverse proxies and load balancers?",
-    "options": ["A load balancer is always Layer 4, while a reverse proxy is always Layer 7", "One product can perform both roles; reverse-proxy features can help even with one backend", "A reverse proxy handles outbound client traffic, while a load balancer handles inbound traffic", "A reverse proxy requires one backend, while a load balancer requires exactly two"],
-    "correct_answer": "B",
-    "explanation": "The roles overlap, and products such as NGINX and HAProxy can perform both. Load balancing is useful with multiple backends, while reverse-proxy features such as TLS termination, caching, and compression can help even with one backend."
+    "prompt": "A team adds a reverse proxy and finds that application logs now record the proxy's IP for every visitor. The proxy overwrites forwarded-address headers with the client's observed address. Which application policy recovers client addresses while resisting spoofed headers?",
+    "options": [
+      "Use the connection's peer address as the visitor's address",
+      "Trust the forwarded address whenever the request uses HTTPS",
+      "Trust the proxy's forwarded address only on requests from that proxy",
+      "Trust the first forwarded address supplied by any authenticated caller"
+    ],
+    "correct_answer": "C",
+    "explanation": "Forwarded client information is useful only across a defined trust boundary. Trusting arbitrary callers lets clients spoof logged addresses."
   },
   {
     "id": "application_layer_001",
-    "prompt": "What does service discovery help an application find?",
-    "options": ["The database row containing a user's profile", "The DNS registrar responsible for a public domain", "The network locations of available service instances", "The source repository containing a service"],
-    "correct_answer": "C",
-    "explanation": "Service discovery maintains or queries a registry of service instances so clients can locate healthy endpoints whose addresses can change."
+    "prompt": "A photo-sharing app handles account requests and CPU-intensive image conversions in the same deployment. Conversions saturate CPU while account traffic remains light. Which service boundary lets the team add conversion capacity independently?",
+    "options": [
+      "Separate read endpoints from write endpoints across both workloads",
+      "Separate conversion workers from the account request service",
+      "Separate database access from a shared account-and-conversion service",
+      "Separate HTTP routing from a shared account-and-conversion service"
+    ],
+    "correct_answer": "B",
+    "explanation": "A boundary around a distinct resource-intensive workload allows targeted scaling. Arbitrary splits and whole-application duplication do not isolate the measured resource demand."
   },
   {
     "id": "application_layer_002",
-    "prompt": "What is a common benefit of splitting an application into independently deployable services?",
-    "options": ["It eliminates network failures between components", "It makes distributed transactions simpler than local transactions", "It removes the need for monitoring and service discovery", "Each service can be deployed and scaled for its own workload"],
-    "correct_answer": "D",
-    "explanation": "Independent services can be deployed and scaled separately. The trade-off is added network, observability, deployment, and data-consistency complexity."
+    "prompt": "A team replaces service instances during rolling deployments, giving the new instances different network addresses. Clients have hard-coded addresses and keep contacting retired instances. Which approach lets clients find replacements without a client deployment?",
+    "options": [
+      "Look up healthy endpoints in a registry updated as instances change",
+      "Retry the compiled endpoint list with exponential backoff",
+      "Retain each client's first successful endpoint until it reconnects",
+      "Refresh a static endpoint list whenever a new client version ships"
+    ],
+    "correct_answer": "A",
+    "explanation": "Service discovery tracks changing endpoints. Timeouts cannot make obsolete addresses valid, and compiled addresses repeat the deployment coupling."
   },
   {
     "id": "application_layer_003",
-    "prompt": "A registered service instance has stopped sending health heartbeats. How should service discovery treat it for new requests?",
-    "options": ["Stop returning it as a healthy endpoint", "Keep returning it until every client reports a failure", "Prefer it because it has received less recent traffic", "Return only that instance until its DNS TTL expires"],
-    "correct_answer": "A",
-    "explanation": "Discovery should remove or avoid unhealthy instances based on health checks or expired heartbeats so callers do not route new work to failed services."
+    "prompt": "A checkout handler makes six remote calls in sequence because each needs the previous result. Each call takes 40 milliseconds end to end, and the handler does another 10 milliseconds of local work. What is the total request latency under these assumptions?",
+    "options": [
+      "50 milliseconds",
+      "240 milliseconds",
+      "250 milliseconds",
+      "490 milliseconds"
+    ],
+    "correct_answer": "C",
+    "explanation": "The six dependent calls contribute 6 × 40 = 240 milliseconds, plus 10 milliseconds of local work. The 40 milliseconds already includes each call's end-to-end delay, so it should not be doubled. Parallel execution would require removing the dependencies."
   },
   {
     "id": "database_001",
-    "prompt": "Which requirement most strongly favors a relational database?",
-    "options": ["A flexible schema for unrelated documents", "Complex joins and transactional guarantees", "Traversing deep many-to-many relationships as the primary workload", "Writing key-value records without relational constraints"],
-    "correct_answer": "B",
-    "explanation": "Relational databases are a strong fit for structured relational data, strict schemas, complex joins, and transactional guarantees."
+    "prompt": "A banking application transfers money between two accounts stored in the same relational database. A process crash between the debit and credit must leave either both changes committed or neither. Which implementation provides that behavior?",
+    "options": [
+      "Commit the debit, then retry the credit until it succeeds",
+      "Lock both account rows but commit each update separately",
+      "Check both balances, then auto-commit the two updates",
+      "Commit both account updates in one database transaction"
+    ],
+    "correct_answer": "D",
+    "explanation": "A database transaction makes the debit and credit atomic. Locks control concurrent access but do not make separately committed changes atomic. Retrying the second update can repair a partial transfer later, but it does not satisfy the stated crash behavior."
   },
   {
     "id": "database_002",
-    "prompt": "In typical primary-replica database replication, how are requests routed?",
-    "options": ["Reads and writes must both go to every replica", "Writes go to replicas while reads go only to the primary", "Writes go to the primary while reads may be served by replicas", "Each client chooses a writable node and conflicts are impossible"],
-    "correct_answer": "C",
-    "explanation": "The primary accepts writes and replicates changes to replicas. Replicas can scale reads, although asynchronous replication can make them temporarily stale."
+    "prompt": "A support dashboard repeatedly fetches orders for one customer from a large table. The query plan shows a full-table scan, and each customer owns only a small fraction of the rows. Which change should the team evaluate first to reduce rows examined?",
+    "options": [
+      "Increase the connection pool so more lookups run concurrently",
+      "Add read replicas and route each lookup to a replica",
+      "Add an index with an unrelated order timestamp as its leading column",
+      "Add an index with customer_id as its leading column"
+    ],
+    "correct_answer": "D",
+    "explanation": "A B-tree index starting with customer_id groups each customer's entries together, so the database can seek directly to that customer's orders. In a timestamp-first index, those orders can be scattered across many timestamps. Adding replicas or connections leaves the work per lookup unchanged."
   },
   {
     "id": "database_003",
-    "prompt": "Which trade-off commonly accompanies database sharding?",
-    "options": ["All queries gain access to one global index", "Application-level routing is no longer necessary", "Replication becomes unnecessary because shards cannot fail", "Cross-shard joins, rebalancing, and uneven load add complexity"],
+    "prompt": "An order service shards its data by customer ID, making one customer's order history easy to retrieve. Finance now needs a total across all customers for a given day. Without a separate reporting store, what extra work does this query require?",
+    "options": [
+      "Read one shard, selected by hashing the requested date",
+      "Read the busiest shard and scale its total by the shard count",
+      "Read each shard's replica and use the most recent single total",
+      "Read the relevant rows on each shard and combine their totals"
+    ],
     "correct_answer": "D",
-    "explanation": "Sharding reduces the data and load handled by each database, but routing, uneven shard load, rebalancing, and cross-shard operations add complexity."
+    "explanation": "Customer-based partitioning colocates one customer's records, not one day's records. Global daily totals require cross-shard aggregation or a separately maintained aggregate."
+  },
+  {
+    "id": "database_004",
+    "prompt": "A fraud analyst starts with a flagged account, finds the devices it has used, then finds other accounts that used those devices. Each investigation follows a different number of these steps and must show the path connecting two accounts. Which storage model most directly supports that access pattern?",
+    "options": [
+      "A document store with the device history embedded in each account document",
+      "A relational database with an indexed login table recording account, device, and time",
+      "A graph database with accounts and devices as nodes and device use recorded as edges",
+      "A key-value store with a separate record for each login, keyed by event ID"
+    ],
+    "correct_answer": "C",
+    "explanation": "A graph query can follow the stored relationships in either direction and return the accounts and devices along each path. A relational login table can answer the same question by joining login records across successive steps. Embedding device histories groups the data for one account, while the investigation also needs to find accounts from a device."
   },
   {
     "id": "cache_001",
-    "prompt": "Why is a cache commonly placed in front of a database?",
-    "options": ["Reduce repeated database work and response latency", "Guarantee cached data can never become stale", "Replace durable storage with volatile memory", "Ensure every read reaches the database first"],
-    "correct_answer": "A",
-    "explanation": "A cache serves frequently requested data quickly, reducing latency and load on application servers and databases."
+    "prompt": "A product service uses cache-aside: the application checks a cache before reading its database. A requested product is missing from the cache but exists in the database. Which flow serves the request and makes the value available for later cache hits?",
+    "options": [
+      "Ask the cache to retrieve the product from the database automatically",
+      "Have the application read the database and populate the cache",
+      "Have a background scan fill the cache before retrying the request",
+      "Read the database on every request and fill the cache only on writes"
+    ],
+    "correct_answer": "B",
+    "explanation": "In cache-aside, the application owns miss handling: it reads the authoritative database and fills the cache. Having the cache fetch data itself describes read-through caching. Filling only on writes would not cache this existing product on a read miss."
   },
   {
     "id": "cache_002",
-    "prompt": "What happens on a cache miss in the cache-aside pattern?",
-    "options": ["The application reads the data store and returns the value without caching it", "The application reads the data store, caches the value, and returns it", "The cache writes a placeholder and asks the client to retry after expiry", "The request is forwarded between cache nodes until one contains the key"],
-    "correct_answer": "B",
-    "explanation": "Cache-aside checks the cache first. On a miss, the application fetches from the data store and places the result into the cache for later reads."
+    "prompt": "A preferences service queues changes in memory before saving them to a database that uses write-ahead logging. A power failure clears RAM on every server, but the disks survive. What is the earliest point at which the service can acknowledge a change and guarantee it can be recovered after that failure?",
+    "options": [
+      "The cache adds the change to the worker's in-memory queue",
+      "The next checkpoint after commit writes the updated data page to disk",
+      "The database flushes the log through the transaction's commit record to disk",
+      "The database appends the commit record to its in-memory log buffer"
+    ],
+    "correct_answer": "C",
+    "explanation": "Once the log records for the change and its commit are on disk, the database can replay the change during recovery. A power failure can erase both the worker's queue and the database's log buffer. Waiting for the next checkpoint also works, but delays the response unnecessarily."
   },
   {
     "id": "cache_003",
-    "prompt": "What is the main durability risk of write-behind caching?",
-    "options": ["Every write waits for synchronous database confirmation", "Newly written values can never be read from cache", "Acknowledged data can be lost if the cache fails before asynchronous persistence", "The database becomes the only component able to serve reads"],
-    "correct_answer": "C",
-    "explanation": "Write-behind acknowledges a cache update before asynchronously persisting it. A cache failure before the data-store write completes can lose acknowledged data."
+    "prompt": "A news site's most popular cached page expires during a traffic spike. Thousands of concurrent requests then rebuild the same page from the database. Which mechanism directly prevents those requests from doing duplicate rebuild work?",
+    "options": [
+      "Coalesce misses so one request rebuilds the page for the others",
+      "Add random expiry offsets to other keys in the same cache",
+      "Give each concurrent miss a dedicated database connection",
+      "Allow every miss to rebuild, then keep the first completed result"
+    ],
+    "correct_answer": "A",
+    "explanation": "Requests that share a coalescer trigger one rebuild for this key. Expiry jitter helps when many different keys expire together, but does not merge simultaneous misses for one hot key. Extra connections or selecting the first result still allow duplicate work."
   },
   {
     "id": "asynchronism_001",
-    "prompt": "What is a common purpose of a message queue?",
-    "options": ["Guarantee consumers process every message simultaneously", "Replace persistent data stores for all application state", "Ensure producers run only when consumers are idle", "Decouple producers from consumers and buffer work"],
-    "correct_answer": "D",
-    "explanation": "A message queue allows producers and consumers to operate independently and at different rates while queued work waits to be processed."
+    "prompt": "A photo upload endpoint keeps the connection open for 45 seconds while it creates thumbnails. The original photo is already in durable object storage. The product can show a processing screen and poll for completion. Jobs must survive a web-process restart. Which request flow provides a prompt, reliable acknowledgement?",
+    "options": [
+      "Keep processing synchronously and extend the request timeout",
+      "Persist the job in a queue and return its identifier after acceptance",
+      "Start an in-process background task and immediately return its identifier",
+      "Return an identifier first and enqueue the job after sending the response"
+    ],
+    "correct_answer": "B",
+    "explanation": "Persisting the job before acknowledging acceptance lets workers process it after a web-process restart. In-process tasks can disappear on a crash, and responding before enqueueing creates a window where accepted work can be lost. The job ID lets the client check completion separately."
   },
   {
     "id": "asynchronism_002",
-    "prompt": "How can a task queue help a web application handle a slow image-processing job?",
-    "options": ["Enqueue the work for a background worker and return promptly", "Run the full job in the request handler before responding", "Send the job to every application instance and use the first result", "Store the unfinished job only in the user's browser"],
-    "correct_answer": "A",
-    "explanation": "A task queue moves long-running work out of the request path. Workers process jobs asynchronously, improving responsiveness and controlling concurrency."
+    "prompt": "A billing worker applies a payment event to its database, then crashes before acknowledging the queue message. The queue delivers the event again. Which design allows retries without applying the payment twice or losing it?",
+    "options": [
+      "Commit the payment, then record its event ID in a separate transaction",
+      "Acknowledge the event, then commit the payment and its event ID",
+      "Commit the payment and a unique event-ID record in one transaction",
+      "Deduplicate event IDs in worker memory before committing payments"
+    ],
+    "correct_answer": "C",
+    "explanation": "Atomically committing the payment with a uniquely enforced event ID makes repeat delivery detectable without separating the record from its effect. Recording the ID afterward leaves a duplication window; acknowledging first leaves a loss window. Worker memory does not survive a crash."
   },
   {
     "id": "asynchronism_003",
-    "prompt": "Consumers cannot keep up with producers and a queue grows without bound. Which response best applies back pressure?",
-    "options": ["Increase producer retries without limits", "Bound or throttle production and scale consumers where appropriate", "Disable queue-depth monitoring to reduce overhead", "Acknowledge and discard all messages before processing"],
-    "correct_answer": "B",
-    "explanation": "Back pressure prevents an overloaded downstream system from accepting unlimited work. Bounded queues, producer throttling, load shedding, and additional consumers are common responses."
+    "prompt": "A document-processing queue receives 800 jobs per second during a sustained upload burst. Four busy workers each finish 150 jobs per second, with no retries or dropped jobs. At these steady rates, how does the backlog change?",
+    "options": [
+      "It shrinks by 200 jobs per second",
+      "It remains roughly constant",
+      "It grows by 200 jobs per second",
+      "It grows by 650 jobs per second"
+    ],
+    "correct_answer": "C",
+    "explanation": "Combined service capacity is 4 × 150 = 600 jobs per second, below the 800-job arrival rate. The 200-job deficit accumulates until capacity or admission changes."
   },
   {
     "id": "communication_001",
-    "prompt": "Which protocol provides reliable, ordered transport between applications?",
-    "options": ["HTTP", "UDP", "TCP", "RPC"],
-    "correct_answer": "C",
-    "explanation": "TCP provides connection-oriented, reliable, ordered byte delivery. UDP has lower overhead but does not guarantee delivery or ordering."
+    "prompt": "A team is building a file-transfer client that needs an ordered byte stream and can tolerate retransmission delays. It wants the transport to handle loss and ordering rather than implementing those mechanisms itself. Which design meets that requirement?",
+    "options": [
+      "Use UDP and attach sequence numbers to each file chunk",
+      "Use TCP and frame file boundaries in the application protocol",
+      "Use UDP and discard chunks whose checksums fail",
+      "Use UDP and increase socket buffers to absorb arrival bursts"
+    ],
+    "correct_answer": "B",
+    "explanation": "TCP provides loss recovery and ordered byte delivery while the connection is viable. The application supplies file framing and handles connection failures. With UDP, application-supplied sequence numbers can reveal gaps, checksums can detect corruption, and buffers can absorb bursts. Recovering missing bytes requires an additional mechanism."
   },
   {
     "id": "communication_002",
-    "prompt": "Which statement best contrasts RPC and REST?",
-    "options": ["REST models procedures, while RPC models resource state through fixed verbs", "REST requires generated clients, while RPC uses only browser-native clients", "RPC is stateless by definition, while REST requires server-side sessions", "RPC models operations, while REST models resources through a uniform interface"],
-    "correct_answer": "D",
-    "explanation": "RPC is centered on invoking service operations and can couple clients to those operations. REST models resources with a uniform, stateless interface."
+    "prompt": "A multiplayer game sends position snapshots frequently, and each new snapshot replaces the previous state. Occasional loss is acceptable, but waiting for an obsolete snapshot harms responsiveness. Which delivery strategy best matches that requirement?",
+    "options": [
+      "Send UDP snapshots with sequence numbers and discard older arrivals",
+      "Send TCP snapshots and apply them in byte-stream delivery order",
+      "Send UDP snapshots and wait for gaps to be retransmitted before display",
+      "Send UDP snapshots and apply every arrival as the latest position"
+    ],
+    "correct_answer": "A",
+    "explanation": "UDP with sequence numbers lets the receiver apply fresh snapshots and discard reordered older ones. TCP and application-level gap recovery can delay new state behind obsolete data. Applying every UDP arrival can move the displayed state backward when packets reorder."
   },
   {
     "id": "communication_003",
-    "prompt": "A real-time game prefers timely position updates over retransmitting old packets. Which transport is the most natural starting point?",
-    "options": ["UDP, with application-level handling for acceptable loss", "TCP, because every old packet must arrive before a new one can be used", "HTTP long polling, because it guarantees the lowest transport overhead", "RPC, because it is a transport protocol with no delivery guarantees"],
-    "correct_answer": "A",
-    "explanation": "UDP avoids connection and retransmission overhead. For time-sensitive updates, receiving newer data can be more useful than waiting for an older lost packet, although the application must handle loss."
+    "prompt": "A public catalogue needs a bookmarkable URL for each product. When a cached description goes stale, a standard HTTP cache should be able to check for changes without downloading an unchanged description. Which API design meets both requirements?",
+    "options": [
+      "POST /lookup with the product ID in the request body and an ETag on the response",
+      "GET /products/{id} with an ETag and a Cache-Control: no-store response header",
+      "GET /products/{id} with a revision field that clients compare after downloading the JSON",
+      "GET /products/{id} with a cacheable response, an ETag, and support for If-None-Match"
+    ],
+    "correct_answer": "D",
+    "explanation": "The product URL works as a bookmark. A cache can send its stored ETag in an If-None-Match header, and a matching tag lets the server return 304 without a body. A bookmark omits the POST body, no-store prevents caching, and comparing revisions inside JSON requires downloading the description."
   },
   {
     "id": "security_001",
-    "prompt": "Which control primarily protects application data while it travels across a network?",
-    "options": ["Full-disk encryption on the application server", "TLS between communicating endpoints", "Parameterized database queries", "Least-privilege service accounts"],
-    "correct_answer": "B",
-    "explanation": "TLS protects data in transit against interception and tampering. Disk encryption protects data at rest, parameterized queries address injection, and least privilege limits access."
+    "prompt": "A product search accepts arbitrary customer text, including punctuation. The team needs to place that text into a SQL filter safely while preserving legitimate searches. Which implementation provides the strongest separation between input data and query syntax?",
+    "options": [
+      "Escape quote characters manually before concatenating the search text",
+      "Reject a maintained list of SQL keywords before building the query",
+      "Call a stored procedure that concatenates the search text into SQL",
+      "Bind the search text as a parameter in a fixed SQL statement"
+    ],
+    "correct_answer": "D",
+    "explanation": "A bound parameter keeps customer text separate from SQL syntax while preserving punctuation. Keyword filtering and manual escaping are brittle. A stored procedure remains vulnerable if it builds executable SQL by concatenating untrusted input."
   },
   {
     "id": "security_002",
-    "prompt": "A search endpoint accepts a user-supplied term for a SQL query. Which implementation best prevents SQL injection?",
-    "options": ["Escape selected punctuation and concatenate the remaining text", "Reject terms containing SQL keywords before building the query", "Use a parameterized query that binds the term separately from SQL code", "Encode the completed SQL statement before sending it to the database"],
-    "correct_answer": "C",
-    "explanation": "Parameterized queries keep user input separate from executable SQL syntax. Keyword filtering, manual escaping, and encoding a completed query are brittle substitutes."
+    "prompt": "A reporting service needs only aggregated sales totals exposed through a set of database views. The team is choosing permissions for its dedicated account. Which grant best limits the data exposed if those credentials are stolen?",
+    "options": [
+      "Grant read access to the required aggregate views",
+      "Grant read access to all underlying sales tables",
+      "Grant read access to every view in the reporting database",
+      "Grant read access to the full database through a shared reporting role"
+    ],
+    "correct_answer": "A",
+    "explanation": "The required aggregate views expose the data this service needs while limiting access to individual sales records and unrelated reports. Read-only access still permits disclosure, so restricting writes alone is insufficient."
   },
   {
     "id": "security_003",
-    "prompt": "An order service only needs to read orders and update their status. Which database permission design best follows least privilege?",
-    "options": ["Grant administrator access so future features need no permission changes", "Grant read and write access to every table in the application database", "Share the deployment account because it already has schema-management access", "Grant only the required read and status-update permissions on order data"],
-    "correct_answer": "D",
-    "explanation": "Least privilege grants only the permissions needed for the service's current responsibilities. Broad administrator, schema-management, or unrelated table access increases the impact of compromise."
+    "prompt": "A shop authenticates every API request. During testing, changing /orders/123 to /orders/124 reveals an order belonging to another customer. Which server-side check should be added when handling an order request?",
+    "options": [
+      "Check that the session token is valid and has not expired",
+      "Check that the authenticated customer is allowed to access this order",
+      "Check that the requested order ID exists and is well formed",
+      "Check that the customer has permission to use the order API"
+    ],
+    "correct_answer": "B",
+    "explanation": "The missing control is authorization for the specific order. Valid authentication, a well-formed existing ID, and permission to call the API do not establish that this customer may read that particular record."
   }
 ]
