@@ -181,7 +181,7 @@ fn display_welcome<W: Write>(app: &app_state::App, mut stdout: W, width: usize) 
 
     queue!(stdout, SetAttribute(Attribute::Reset))?;
 
-    let text = "Master the trade-offs behind scalable systems";
+    let text = "Explore the trade-offs behind distributed systems";
     queue!(
         stdout,
         MoveTo(centered_x(width, text), start_y + 3),
@@ -237,7 +237,7 @@ fn display_welcome<W: Write>(app: &app_state::App, mut stdout: W, width: usize) 
         let total_question_count = app.questions.len();
 
         let text = format!(
-            "Progress Found • Answered {} out of {}",
+            "Progress Found • {} of {} questions answered",
             questions_answered, total_question_count
         );
         queue!(
